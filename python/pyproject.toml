@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "openrcx"
-version = "0.1.0"
-description = "Program and control the LEGO Mindstorms RCX from a modern PC through a DIY or original IR tower"
+name = "openmindstorms"
+version = "0.2.0"
+description = "Program and control the LEGO Mindstorms RCX (IR tower) and NXT (USB/Bluetooth) from a modern PC"
 readme = "../README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -16,6 +16,7 @@ usb = ["pyusb>=1.2"]
 
 [project.scripts]
 rcx = "openrcx.cli:main"
+nxt = "opennxt.cli:main"
 
 [tool.setuptools]
-packages = ["openrcx"]
+packages = ["openrcx", "opennxt"]
