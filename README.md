@@ -7,11 +7,11 @@ Three pieces:
 
 | Piece | What it is |
 | --- | --- |
-| [`gui/`](gui/) | **OpenRCX Workbench**: a point-and-click front end that runs in Chrome or Edge straight from `gui/OpenRCX.html`. Program with snap-together **blocks** (RCX Code style) or NQC text, compile in the browser, download, run, drive motors, watch sensors, load firmware, read the datalog. No install, no Python |
+| [`web/`](web/) | **OpenRCX Workbench**: a point-and-click front end that runs in Chrome or Edge straight from `web/rcx/index.html`. Program with snap-together **blocks** (RCX Code style) or NQC text, compile in the browser, download, run, drive motors, watch sensors, load firmware, read the datalog. No install, no Python |
 | [`tower/`](tower/) | Firmware that turns a **Teensy 4.x or ESP32** plus an IR LED and a 38 kHz receiver into an RCX infrared tower that appears as a normal USB serial port |
 | [`python/`](python/) | `openrcx` library and the `rcx` command for scripting and automation: firmware install, program download, motors, sensors, sounds, datalog, raw opcodes. Compiles NQC sources with the bundled `nqc.exe` |
 
-**Fastest start:** open [gui/OpenRCX.html](gui/OpenRCX.html) in Edge or Chrome, pick your
+**Fastest start:** open [web/rcx/index.html](web/rcx/index.html) in Edge or Chrome, pick your
 tower, press Connect. Choose *Simulator* to try it with no hardware at all.
 
 Because the DIY tower looks exactly like a LEGO *serial* tower on a COM port, the
@@ -239,7 +239,7 @@ behaviour matches the proven tools). See [docs/protocol.md](docs/protocol.md).
 * Python library and CLI: 31 unit tests against the simulator; the simulator now
   mirrors behaviour measured on the brick (bare-ROM replies, motor status bits,
   firmware version word).
-* Browser GUI: protocol core shares those tests (`node gui/tests/run.js`); compile,
+* Browser GUI: protocol core shares those tests (`node web/rcx/tests/run.js`); compile,
   download and firmware install verified in headless Edge against the simulator.
   Web Serial path to the real tower not yet exercised from the GUI.
 * Tower firmware: compiles for Teensy 4.0 and ESP32-S3, not yet tried on hardware.

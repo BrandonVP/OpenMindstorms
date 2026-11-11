@@ -40,10 +40,10 @@ test('parseCommand round trip', () => {
 });
 
 test('S-record parser reproduces documented firmware checksum', () => {
-  const img = P.parseSrec(fs.readFileSync(path.join(root, '..', 'firmware', 'firm0309.lgo'), 'utf8'));
+  const img = P.parseSrec(fs.readFileSync(path.join(root, '..', '..', 'firmware', 'firm0309.lgo'), 'utf8'));
   assert.strictEqual(img.start, 0x8000);
   assert.strictEqual(img.checksum, 0xC278);
-  const img2 = P.parseSrec(fs.readFileSync(path.join(root, '..', 'firmware', 'firm0328.lgo'), 'utf8'));
+  const img2 = P.parseSrec(fs.readFileSync(path.join(root, '..', '..', 'firmware', 'firm0328.lgo'), 'utf8'));
   assert.strictEqual(img2.data.length, 24944);
   assert.strictEqual(img2.title, 'firm0328.lgo');
 });
@@ -99,7 +99,7 @@ test('full firmware download into a blank brick', async () => {
   const t = new S.SimTransport({ firmware: false });
   const rcx = new L.RCX(new L.RcxLink(t));
   assert.strictEqual((await rcx.versions()).hasFirmware, false);
-  const img = P.parseSrec(fs.readFileSync(path.join(root, '..', 'firmware', 'firm0328.lgo'), 'utf8'));
+  const img = P.parseSrec(fs.readFileSync(path.join(root, '..', '..', 'firmware', 'firm0328.lgo'), 'utf8'));
   let last = 0;
   await rcx.downloadFirmware(img, (d) => { last = d; });
   assert.strictEqual(last, img.data.length);
@@ -114,7 +114,7 @@ test('full firmware download into a blank brick', async () => {
 test('firmware checksum mismatch reported as error 4', async () => {
   const t = new S.SimTransport({ firmware: false });
   const rcx = new L.RCX(new L.RcxLink(t));
-  const img = P.parseSrec(fs.readFileSync(path.join(root, '..', 'firmware', 'firm0309.lgo'), 'utf8'));
+  const img = P.parseSrec(fs.readFileSync(path.join(root, '..', '..', 'firmware', 'firm0309.lgo'), 'utf8'));
   const tampered = { start: img.start, checksum: img.checksum, data: Uint8Array.from(img.data) };
   tampered.data[100] ^= 0xFF;
   await assert.rejects(() => rcx.downloadFirmware(tampered), e => e.name === 'ReplyError' && e.code === 4);

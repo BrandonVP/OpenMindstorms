@@ -19,9 +19,8 @@ RUN sed -i 's/\r$//' /docker-entrypoint.d/10-gen-cert.sh /etc/nginx/conf.d/defau
     && chmod +x /docker-entrypoint.d/10-gen-cert.sh
 
 # Only what the browser needs: the Workbench, the docs it links to, and a landing redirect.
-COPY gui/ /usr/share/nginx/html/gui/
+COPY web/ /usr/share/nginx/html/
 COPY docs/ /usr/share/nginx/html/docs/
-COPY README.md /usr/share/nginx/html/README.md
 # Files copied onto the NAS share over SMB arrive owner-only (0600/0700) and COPY
 # keeps those modes; nginx's worker runs as user "nginx", so open them up.
 RUN chmod -R a+rX /usr/share/nginx/html

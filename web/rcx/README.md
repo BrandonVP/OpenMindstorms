@@ -1,7 +1,7 @@
 # OpenRCX Workbench (GUI)
 
 A desktop-style front end for the RCX that runs entirely inside Chrome or Edge. Nothing
-to install: double-click `OpenRCX.html`.
+to install: double-click `index.html`.
 
 | Section | What it does |
 | --- | --- |
@@ -12,7 +12,7 @@ to install: double-click `OpenRCX.html`.
 | **Datalog** | Upload the datalog, save as CSV, create/clear |
 | **Console** | Every packet on the link in hex, retry statistics, send any raw opcode |
 
-Keys 1-6 switch sections, and `OpenRCX.html#program` etc. opens a section directly.
+Keys 1-6 switch sections, and `index.html#program` etc. opens a section directly.
 Your source, chosen tower and slot are remembered in the browser.
 
 ## Block programming
@@ -37,7 +37,7 @@ hands the generated program to the text editor for further editing.
 The browser opens the COM port itself through the **Web Serial API** (2400 baud, 8 data
 bits, odd parity) and, for the original USB tower, talks **WebUSB** to the tower's
 vendor requests. The protocol code in `js/` is a line-for-line port of the Python
-package and is covered by the same tests (`node gui/tests/run.js`).
+package and is covered by the same tests (`node web/rcx/tests/run.js`).
 
 Compilation uses **WebNQC**, NQC 3.1 r6 compiled to WebAssembly by maehw
 (`vendor/webnqc/`, Mozilla Public License 2.0). A fresh compiler instance is created
