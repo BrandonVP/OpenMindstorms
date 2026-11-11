@@ -212,6 +212,28 @@ which Edge and Chrome use. The same file is also downloadable from
 If you would rather skip certificates, open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
 add `http://openrcx.vp`, and use plain HTTP; the page is served on both ports.
 
+The app has two containers: `openrcx` (nginx, the site) and `nxc` (the NXC compiler
+behind `/api/nxc`, used by OpenNXT). When the YAML changes, update it in TrueNAS under
+Apps > openrcx > Edit before Stop/Start.
+
+### Public site: www.openmindstorms.com through the Cloudflare tunnel
+
+The same Cloudflare tunnel that publishes Empires of Rome can publish this site; the
+tunnel runs on the NAS and can reach the app's bridge address.
+
+1. Register `openmindstorms.com` and add it to the Cloudflare account (nameservers to
+   Cloudflare).
+2. Zero Trust > Networks > Tunnels > the existing tunnel > Public Hostname > Add:
+   `www.openmindstorms.com`, service **HTTP**, URL `192.168.68.208:80`. Add a second one
+   for the bare `openmindstorms.com` or a redirect rule to `www`.
+3. Done: Cloudflare terminates HTTPS with a real certificate, so Web Serial and WebUSB
+   work for every visitor with no certificate warning. The compile service is reached
+   through the same hostname at `/api/nxc`.
+
+nginx already answers any hostname, and the Workbench pages use relative URLs, so
+nothing in the container changes. If you later put the public site on its own bridge
+alias or port, only the tunnel's public hostname entry moves.
+
 ## Repository layout
 
 ```

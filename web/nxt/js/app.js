@@ -19,6 +19,7 @@
     document.querySelectorAll('.rail button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === name));
     store.set('view', name);
     if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+    if (name === 'program' && typeof Blockly !== 'undefined' && bws && editorMode === 'blocks') setTimeout(() => Blockly.svgResize(bws), 0);
   }
   document.querySelectorAll('.rail button[data-view]').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
   window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (VIEWS.includes(h)) showView(h); });
@@ -183,6 +184,47 @@
     return run('Uploading ' + name, async () => { await nxt.upload(name, compiled, progressUI('progUpload', 'progUploadText', name)); toast('Uploaded ' + name, 'good'); });
   }
   $('btnUpload').addEventListener('click', uploadProgram);
+
+  /* ---------------------------------------------------------- program: blocks */
+  const Bk = OpenNXT.blocks;
+  let bws = null, editorMode = 'text';
+  const blocksCode = () => bws ? Bk.generate(bws) : '';
+  function refreshGenerated() { if (!bws) return; try { $('genCode').textContent = blocksCode(); } catch (e) { $('genCode').textContent = '// ' + e.message; } }
+  function saveBlocksState() { if (!bws) return; try { store.set('blocks', JSON.stringify(Blockly.serialization.workspaces.save(bws))); } catch (e) { /* ignore */ } }
+  function loadBlocks(json) { if (!bws) return; bws.clear(); Blockly.serialization.workspaces.load(json, bws); refreshGenerated(); saveBlocksState(); }
+  function ensureBlockly() {
+    if (bws || !Bk) return;
+    const dark = (matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.dataset.theme !== 'light') || document.documentElement.dataset.theme === 'dark';
+    bws = Blockly.inject('blocklyDiv', { toolbox: Bk.toolbox, renderer: 'zelos', theme: Bk.themeFor(dark), trashcan: true,
+      zoom: { controls: true, wheel: true, startScale: 0.7, maxScale: 1.5, minScale: 0.4 }, grid: { spacing: 24, length: 3, colour: dark ? '#2e3742' : '#d5dae2', snap: true }, move: { scrollbars: true, drag: true, wheel: false } });
+    let saved = null; try { saved = JSON.parse(store.get('blocks', 'null')); } catch (e) { saved = null; }
+    try { Blockly.serialization.workspaces.load(saved && saved.blocks ? saved : Bk.starter, bws); } catch (e) { bws.clear(); Blockly.serialization.workspaces.load(Bk.starter, bws); }
+    bws.addChangeListener(ev => { if (ev.isUiEvent) return; refreshGenerated(); saveBlocksState(); });
+    refreshGenerated();
+    Bk.examples.forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('blockExampleSel').appendChild(o); });
+  }
+  function setEditorMode(mode) {
+    if (mode === 'blocks' && !Bk) { toast('Blockly did not load.', 'bad'); mode = 'text'; }
+    editorMode = mode;
+    document.querySelectorAll('.mode-blocks').forEach(el => { el.hidden = mode !== 'blocks'; });
+    document.querySelectorAll('.mode-text').forEach(el => { el.hidden = mode !== 'text'; });
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === mode)));
+    store.set('mode', mode);
+    if (mode === 'blocks') { ensureBlockly(); setTimeout(() => bws && Blockly.svgResize(bws), 0); }
+  }
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setEditorMode(b.dataset.mode)));
+  window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; loadBlocks(Bk.examples[e.target.value].json); e.target.value = ''; });
+  $('btnBlocksNew').addEventListener('click', () => loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'nxt_program', x: 40, y: 40 }] } }));
+  $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
+  $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
+  $('btnSaveBlocks').addEventListener('click', () => bws && saveBlob('program.nxtblocks.json', JSON.stringify(Blockly.serialization.workspaces.save(bws), null, 1), 'application/json'));
+  $('btnBlocksToText').addEventListener('click', () => { src.value = blocksCode(); src.dispatchEvent(new Event('input')); setEditorMode('text'); toast('Generated NXC copied to the text editor'); });
+  async function compileBlocks() { refreshGenerated(); $('genDetails').open = true; const saved = src.value; src.value = blocksCode(); const ok = await compile(); src.value = saved; renderGutter(); return ok; }
+  $('btnCompileBlocks').addEventListener('click', compileBlocks);
+  $('btnUploadBlocks').addEventListener('click', async () => { if (await compileBlocks()) await uploadProgram(); });
+  $('btnRunBlocks').addEventListener('click', () => run('Run', async () => { await nxt.startProgram($('progName').value.trim()); $('infoProg').textContent = $('progName').value.trim(); }));
+  $('btnStopBlocks').addEventListener('click', () => run('Stop', async () => { await nxt.stopProgram(); await nxt.motorsStop(false); }));
   $('btnRun').addEventListener('click', async () => { if (!nxt) { toast('Connect first.', 'bad'); return; } const name = $('progName').value.trim(); await run('Run', async () => { await nxt.startProgram(name); $('infoProg').textContent = name; }); });
   $('btnStopProg').addEventListener('click', () => run('Stop', async () => { await nxt.stopProgram(); await nxt.motorsStop(false); $('infoProg').textContent = '-'; }));
 
@@ -308,6 +350,7 @@
     src.value = store.get('src', OpenNXT.examples[0].source); renderGutter();
     $('compileUrl').value = store.get('compileUrl', defaultCompileUrl());
     renderApi('');
+    setEditorMode(store.get('mode', 'blocks'));
     const h = location.hash.slice(1); showView(VIEWS.includes(h) ? h : store.get('view', 'connect'));
   }
   init();

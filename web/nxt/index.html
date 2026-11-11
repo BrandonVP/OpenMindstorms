@@ -100,8 +100,26 @@
 
       <!-- ============================================================ PROGRAM -->
       <section class="view" id="view-program">
-        <header><h2>Program</h2><p>Write NXC, compile on the server, upload to the brick, run.</p></header>
-        <div class="row" style="margin-bottom:10px">
+        <header><h2>Program</h2><p>Build it from NXT-G style blocks or write NXC, compile on the server, upload to the brick, run.</p>
+          <div class="seg" role="tablist" aria-label="Editor mode"><button role="tab" data-mode="blocks" aria-selected="false">Blocks</button><button role="tab" data-mode="text" aria-selected="true">NXC text</button></div></header>
+        <div class="row mode-blocks" style="margin-bottom:10px" hidden>
+          <label class="f"><span>Examples</span><select id="blockExampleSel"><option value="">Choose…</option></select></label>
+          <button class="btn" id="btnBlocksNew">New</button>
+          <button class="btn" id="btnOpenBlocks">Open blocks…</button>
+          <button class="btn" id="btnSaveBlocks">Save blocks</button>
+          <input type="file" id="fileBlocks" accept=".json,.nxtblocks" hidden>
+          <button class="btn" id="btnBlocksToText">Send to NXC text</button>
+          <span style="flex:1"></span>
+          <button class="btn primary" id="btnCompileBlocks">Compile</button>
+          <button class="btn needs-link" id="btnUploadBlocks">Upload</button>
+          <button class="btn run needs-link" id="btnRunBlocks">Run</button>
+          <button class="btn stop needs-link" id="btnStopBlocks">Stop</button>
+        </div>
+        <div class="mode-blocks" hidden>
+          <div id="blocklyDiv" class="blockly-host"></div>
+          <details class="gen" id="genDetails"><summary>Generated NXC</summary><pre class="out" id="genCode"></pre></details>
+        </div>
+        <div class="row mode-text" style="margin-bottom:10px">
           <label class="f"><span>Examples</span><select id="exampleSel"><option value="">Choose…</option></select></label>
           <button class="btn" id="btnOpenSrc">Open .nxc</button>
           <button class="btn" id="btnSaveSrc">Save .nxc</button>
@@ -113,7 +131,7 @@
           <button class="btn run needs-link" id="btnRun">Run</button>
           <button class="btn stop needs-link" id="btnStopProg">Stop</button>
         </div>
-        <div class="workspace">
+        <div class="workspace mode-text">
           <div class="editor"><div class="gutter" id="gutter">1</div><textarea id="src" spellcheck="false" aria-label="NXC source"></textarea></div>
           <aside class="api" aria-label="NXC API reference">
             <div class="api-head">
@@ -199,6 +217,8 @@
 <script src="js/sim.js"></script>
 <script src="data/nxc_api.js"></script>
 <script src="data/examples.js"></script>
+<script src="../rcx/vendor/blockly/blockly.min.js"></script>
+<script src="js/blocks.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

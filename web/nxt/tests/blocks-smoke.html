@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>OpenNXT blocks smoke test</title></head>
+<body>
+<pre id="out">running…</pre>
+<script src="../../rcx/vendor/blockly/blockly.min.js"></script>
+<script src="../js/blocks.js"></script>
+<script>
+(async () => {
+  const out = []; const say = t => { out.push(t); document.getElementById('out').textContent = out.join('\n'); };
+  try {
+    const B = OpenNXT.blocks; if (!B) throw new Error('blocks module did not load');
+    for (const ex of B.examples) { const ws = new Blockly.Workspace(); Blockly.serialization.workspaces.load(ex.json, ws); say('=== ' + ex.name + ' ===\n' + B.generate(ws)); ws.dispose(); }
+    const types = []; const walk = c => { for (const i of c) { if (i.kind === 'block') types.push(i.type); if (i.contents) walk(i.contents); } }; walk(B.toolbox.contents);
+    const ws2 = new Blockly.Workspace(); const hat = ws2.newBlock('nxt_program'); let prev = null;
+    for (const t of types) { const b = ws2.newBlock(t); if (b.previousConnection) { if (!prev) hat.getInput('DO').connection.connect(b.previousConnection); else prev.nextConnection.connect(b.previousConnection); if (b.nextConnection) prev = b; } }
+    say('=== all toolbox blocks ===\n' + B.generate(ws2));
+    say('BLOCKS SMOKE OK');
+  } catch (e) { say('BLOCKS SMOKE FAIL ' + (e.stack || e)); }
+})();
+</script>
+</body></html>
