@@ -303,6 +303,12 @@ tools/nqc/             NQC 3.1 r6 Win32 compiler (MPL 2.0)
 docs/                  protocol notes and LEGO reference PDFs
 ```
 
+## Licence
+
+MIT, see [LICENSE](LICENSE). Vendored components (Blockly, WebNQC, NQC) and the
+LEGO firmware images and documents keep their own terms, listed in
+[THIRD_PARTY.md](THIRD_PARTY.md).
+
 ## Protocol references
 
 The implementation follows Kekoa Proudfoot's RCX Internals and opcode reference, the

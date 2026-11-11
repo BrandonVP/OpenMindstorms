@@ -19,14 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Third-party material in this repository keeps its own license:
-
-* tools/nqc/        NQC 3.1 r6 by Dave Baum and John Hansen - Mozilla Public
-                    License 2.0 (see tools/nqc/LICENSE).
-* firmware/*.lgo    Official LEGO RCX firmware images, copyright The LEGO
-                    Group, redistributed for the preservation of the RCX as
-                    done by the BrickBot archive.
-* docs/*.pdf        LEGO reference documents, copyright The LEGO Group.
