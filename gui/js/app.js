@@ -541,6 +541,11 @@
   function init() {
     const serialOk = T.SerialTransport.available(), usbOk = T.UsbTowerTransport.available();
     $('noSerial').hidden = serialOk;
+    if (!serialOk && typeof isSecureContext !== 'undefined' && !isSecureContext && location.protocol === 'http:') {
+      $('noSerial').innerHTML = 'This page is served over plain <b>http</b>, and browsers only hand out serial ports to secure pages. '
+        + 'Open <a href="https://' + location.host + location.pathname + '">https://' + location.host + '</a> instead (trust its certificate once with truenas\\trust-cert.ps1), '
+        + 'or add <code>http://' + location.host + '</code> to <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code>. The simulator works either way.';
+    }
     document.querySelectorAll('input[name=tower]').forEach(r => {
       const dis = (r.value === 'diy' || r.value === 'serial') ? !serialOk : r.value === 'usb' ? !usbOk : false;
       r.disabled = dis; r.closest('.choice').classList.toggle('disabled', dis);

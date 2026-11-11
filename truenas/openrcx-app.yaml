@@ -7,11 +7,14 @@
 #   /mnt/apps/configs/openrcx/src    = \\TRUENAS\openrcx\src    (source to build)
 #   /mnt/apps/configs/openrcx/certs  = \\TRUENAS\openrcx\certs  (self-signed TLS cert, made on first start)
 #
-# OpenRCX gets its own address, 192.168.68.208 (an alias on the br0 bridge).
-# Open  https://192.168.68.208  in Chrome or Edge on the PC the IR tower is plugged into,
-# accept the certificate warning once (the cert is self-signed), and connect.
-# Plain http://192.168.68.208 just redirects to https: browsers only hand out
-# serial ports to secure pages.
+# OpenRCX gets its own address, 192.168.68.208 (an alias on the br0 bridge), and the
+# local DNS name openrcx.vp.
+# Open  https://openrcx.vp  in Chrome or Edge on the PC the IR tower is plugged into.
+# The certificate is self-signed: run truenas\trust-cert.ps1 once on that PC (it reads
+# \\TRUENAS\openrcx\certs\server.crt) and the warning goes away for good.
+# Browsers only hand out serial ports to secure pages, so http://openrcx.vp shows the
+# Workbench but cannot connect to the tower unless that origin is whitelisted in
+# chrome://flags/#unsafely-treat-insecure-origin-as-secure.
 
 services:
   openrcx:
@@ -26,6 +29,7 @@ services:
     volumes:
       - /mnt/apps/configs/openrcx/certs:/certs
     environment:
-      SERVER_IP: 192.168.68.208    # goes into the certificate's subjectAltName
+      SERVER_IP: 192.168.68.208            # these go into the certificate; changing them
+      SERVER_NAMES: openrcx.vp,openrcx,truenas   # regenerates it on the next start
       TZ: America/Chicago
     restart: unless-stopped

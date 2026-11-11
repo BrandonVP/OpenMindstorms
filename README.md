@@ -163,11 +163,24 @@ powershell -ExecutionPolicy Bypass -File .\deploy-to-nas.ps1     # copies HEAD t
 Then in TrueNAS SCALE: *Apps > Discover Apps > ⋮ > Install via YAML*, name `openrcx`,
 paste [truenas/openrcx-app.yaml](truenas/openrcx-app.yaml). The app builds the image
 from `/mnt/apps/configs/openrcx/src` ([Dockerfile](Dockerfile)) and listens on
-**https://192.168.68.208**. The first visit shows a certificate warning (self-signed);
-accept it once. After a redeploy, Stop and Start the app to rebuild.
+**https://openrcx.vp** / **https://192.168.68.208** (the names and IP in the YAML's
+`SERVER_NAMES` / `SERVER_IP` go into the certificate). After a redeploy, Stop and Start
+the app to rebuild.
 
-If you would rather skip the certificate, open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
-add `http://192.168.68.208`, and use plain HTTP.
+The certificate is self-signed, so the first visit warns. To make the warning go away
+for good on a PC, run once (as Administrator for the whole machine, or as yourself for
+your account only):
+
+```
+powershell -ExecutionPolicy Bypass -File .\truenas\trust-cert.ps1
+```
+
+It imports `\\TRUENAS\openrcx\certs\server.crt` into the Windows trusted-root store,
+which Edge and Chrome use. The same file is also downloadable from
+`https://openrcx.vp/cert` for other machines.
+
+If you would rather skip certificates, open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
+add `http://openrcx.vp`, and use plain HTTP; the page is served on both ports.
 
 ## Repository layout
 
