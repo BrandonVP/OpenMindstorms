@@ -181,6 +181,11 @@ th { font-family: var(--display); font-size: 11.5px; text-transform: uppercase; 
 .toast.bad { background: var(--bad); color: #fff; } .toast.good { background: var(--good); color: #fff; }
 .muted { color: var(--muted); } .small { font-size: 12.5px; }
 .hint { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+.help { margin-top: 10px; font-size: 12.5px; }
+.help summary { cursor: pointer; font-family: var(--display); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.help p { margin: 8px 0 0; color: var(--muted); line-height: 1.45; }
+.help a { color: var(--focus); }
+.help code { font-size: 11.5px; }
 .sim-only { display: none; } body.sim .sim-only { display: block; }
 .disconnected .needs-link { opacity: .5; pointer-events: none; }
 
@@ -240,6 +245,14 @@ th { font-family: var(--display); font-size: 11.5px; text-transform: uppercase; 
               <label class="f" id="usbRangeWrap" hidden><span>USB tower range</span><select id="usbRange"><option>short</option><option selected>medium</option><option>long</option></select></label>
             </div>
             <p class="hint">Connecting opens the browser's port picker. Put the brick 5–50 cm in front of the tower, switched on, out of direct sunlight.</p>
+            <details class="help">
+              <summary>Driver help (Windows)</summary>
+              <p><b>Serial tower on a Prolific USB-serial cable:</b> if the COM port is named "PL2303TA DO NOT SUPPORT WINDOWS 11", Windows Update gave it the driver that refuses older chips. Install the older driver from
+                <a href="https://github.com/BrandonVP/Prolific" target="_blank" rel="noopener">github.com/BrandonVP/Prolific</a>: Device Manager → the port → Update driver → Browse my computer → Let me pick → Have Disk → the folder extracted from <code>PL2303_Prolific_v3.8.38.2.cab</code> (black/newer cables) or, for grey/older cables, run <code>PL2303_Prolific_v3.3.2.105.exe</code> and pick the 2008 driver. Then block driver auto-update (Device Installation Settings → No).</p>
+              <p><b>LEGO USB tower:</b> LEGO's driver is 32-bit only. Install the generic WinUSB driver with <a href="https://zadig.akeo.ie/" target="_blank" rel="noopener">Zadig</a>: Options → List All Devices → "LEGO USB Tower" (0694 0001) → target WinUSB → Replace Driver.</p>
+              <p><b>OpenRCX DIY tower:</b> no driver needed; Teensy and ESP32 boards use Windows' built-in USB serial driver.</p>
+              <p>Full instructions: <a href="https://github.com/BrandonVP/OpenRCX#drivers" target="_blank" rel="noopener">OpenRCX README, Drivers</a>.</p>
+            </details>
           </div>
           <div class="panel">
             <h3>Brick</h3>

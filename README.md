@@ -89,23 +89,52 @@ picks `diy` for a Teensy/Espressif port and `serial` for a USB-serial adapter.
 Every command also works against a built-in simulated RCX: add `--sim` (or
 `--sim --sim-blank` for a brick without firmware) to try the tool with no hardware.
 
-### Prolific PL2303 adapters on Windows 11
+### Drivers
 
-Many USB-serial cables (including the one that came with LEGO/serial-tower bundles)
-use a Prolific PL2303 chip. Windows Update installs Prolific's driver 3.9.x, which
-deliberately refuses the older PL2303HXA/XA/TA chips: Device Manager shows the port as
-*"PL2303TA DO NOT SUPPORT WINDOWS 11 OR LATER"* and opening it fails. The chip works
-fine with the older driver:
+#### Serial tower on a Prolific PL2303 USB-serial cable (Windows 11)
 
-1. Get Prolific's `PL2303_64bit_Installer` v1.12.0 (driver **3.8.12.0**) or any 3.8.x
-   package, install it, and unplug/replug the adapter.
-2. If the name still says "DO NOT SUPPORT": Device Manager > the port > *Update
-   driver* > *Browse my computer* > *Let me pick* > choose the *3.8.x* entry.
-3. Stop Windows Update from putting 3.9.x back: *Settings > System > About > Advanced
-   system settings > Hardware > Device Installation Settings > No*, or hide the driver
+Most USB-to-RS-232 cables use a Prolific PL2303 chip. Windows Update installs
+Prolific's driver 3.9.x, which deliberately refuses the older PL2303HXA/XA/TA chips:
+Device Manager shows the port as *"PL2303TA DO NOT SUPPORT WINDOWS 11 OR LATER"* and
+opening it fails with "a device which does not exist was specified". The chip is fine;
+it just needs the older driver, which is kept here:
+
+**https://github.com/BrandonVP/Prolific**
+
+1. Download the repo (Code > Download ZIP) and extract it.
+2. Plug in the cable. Open *Device Manager*, right-click the Prolific port under
+   *Ports (COM & LPT)* and choose *Update driver* > *Browse my computer for drivers*.
+3. **Newer cables (usually black, PL2303TA/HXD):** extract `PL2303_Prolific_v3.8.38.2.cab`
+   into a folder (right-click > Extract, or `expand file.cab -F:* folder`), then
+   *Let me pick from a list* > *Have Disk...* > point at that folder > pick the
+   *Prolific USB-to-Serial Comm Port* entry.
+   **Older cables (usually grey, PL2303HXA/XA):** run `PL2303_Prolific_v3.3.2.105.exe`,
+   then *Let me pick from a list* and choose the **2008** driver version.
+4. Unplug and replug the cable. The port should now be named *Prolific USB-to-Serial
+   Comm Port (COMx)* and `rcx ports --probe` should report the LEGO serial tower on it.
+5. Stop Windows Update from putting 3.9.x back: *Settings > System > About > Advanced
+   system settings > Hardware tab > Device Installation Settings > No*, or hide that
    update with Microsoft's *wushowhide* tool.
 
-Alternatively use an FTDI or CP2102 adapter, which need no such care.
+FTDI and CP2102 adapters need none of this.
+
+#### Original LEGO USB tower (Windows)
+
+LEGO's own driver is 32-bit only. OpenRCX and the Workbench talk to the tower directly
+through the generic **WinUSB** driver, installed with **Zadig**:
+
+1. Download Zadig from https://zadig.akeo.ie/ (a single exe, no install) and plug in
+   the tower.
+2. In Zadig: *Options > List All Devices*, pick **LEGO USB Tower** (USB ID 0694 0001)
+   in the dropdown, make sure the target driver on the right says **WinUSB**, and click
+   *Replace Driver* (or *Install Driver*). Windows asks once to trust the installer.
+3. Done: `rcx -t usb ping` from the command line, or choose *LEGO USB tower* in the
+   Workbench (it uses WebUSB, which also requires WinUSB on Windows).
+
+To go back to LEGO's driver later: Device Manager > the tower under *Universal Serial
+Bus devices* > Uninstall device > tick *delete the driver software*, then replug.
+On Linux no driver change is needed (the kernel's legousbtower module exists), but
+unbind it or run as root for libusb access.
 
 ## Using the Python library
 

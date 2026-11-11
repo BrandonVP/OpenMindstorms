@@ -58,6 +58,8 @@ DIY_VIDS = {TEENSY_VID, ESPRESSIF_VID}
 USB_SERIAL_VIDS = {0x0403: "FTDI", 0x10C4: "Silicon Labs CP210x", 0x1A86: "WCH CH340",
                    0x067B: "Prolific PL2303"}
 LEGO_SERIAL_BAUD = 2400
+PROLIFIC_DRIVER_URL = "https://github.com/BrandonVP/Prolific"
+ZADIG_URL = "https://zadig.akeo.ie/"
 
 
 def classify_port(vid: Optional[int], description: str = "") -> str:
@@ -109,6 +111,8 @@ def list_serial_ports(probe: bool = False) -> List[dict]:
             hint += " - OpenRCX DIY tower"
         elif p.vid in USB_SERIAL_VIDS:
             hint = USB_SERIAL_VIDS[p.vid] + " USB-serial adapter"
+            if "DO NOT SUPPORT" in (p.description or "").upper():
+                hint += " - crippled by the Windows Update driver; install the older one from " + PROLIFIC_DRIVER_URL
         elif kind == "serial":
             hint = "RS-232 port"
         else:
@@ -261,8 +265,9 @@ class UsbTowerTransport(Transport):
         dev = usb.core.find(idVendor=LEGO_USB_VID, idProduct=LEGO_USB_TOWER_PID)
         if dev is None:
             raise TransportError(
-                "LEGO USB tower not found (VID 0694 PID 0001). On Windows the "
-                "tower must be bound to the WinUSB driver with Zadig.")
+                "LEGO USB tower not found (VID 0694 PID 0001). On Windows the tower "
+                f"must be bound to the WinUSB driver with Zadig ({ZADIG_URL}): "
+                "Options > List All Devices > LEGO USB Tower > WinUSB > Replace Driver.")
         self.dev = dev
         try:
             if dev.is_kernel_driver_active(0):
