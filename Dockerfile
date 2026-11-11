@@ -22,6 +22,9 @@ RUN sed -i 's/\r$//' /docker-entrypoint.d/10-gen-cert.sh /etc/nginx/conf.d/defau
 COPY gui/ /usr/share/nginx/html/gui/
 COPY docs/ /usr/share/nginx/html/docs/
 COPY README.md /usr/share/nginx/html/README.md
+# Files copied onto the NAS share over SMB arrive owner-only (0600/0700) and COPY
+# keeps those modes; nginx's worker runs as user "nginx", so open them up.
+RUN chmod -R a+rX /usr/share/nginx/html
 
 ENV SERVER_IP=192.168.68.208
 
