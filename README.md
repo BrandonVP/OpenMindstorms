@@ -147,6 +147,24 @@ Bus devices* > Uninstall device > tick *delete the driver software*, then replug
 On Linux no driver change is needed (the kernel's legousbtower module exists), but
 unbind it or run as root for libusb access.
 
+#### NXT and EV3 on macOS and Linux
+
+Only Windows needs driver work, and only for the NXT over USB. On **macOS** nothing
+is installed: Chrome opens the NXT (WebUSB) and the EV3 (WebHID) directly, and a
+brick paired in System Settings (NXT passkey `1234`; the EV3 shows its passkey on
+the brick) appears as a Bluetooth serial port that Chrome's port picker lists under
+the brick's name. Safari has none of these APIs; use Chrome or Edge. On **Linux** the
+browser needs permission to open the device, which a udev rule gives:
+
+```
+# /etc/udev/rules.d/50-mindstorms.rules
+SUBSYSTEM=="usb",  ATTR{idVendor}=="0694",  ATTR{idProduct}=="0002", MODE="0666"   # NXT
+KERNEL=="hidraw*", ATTRS{idVendor}=="0694", ATTRS{idProduct}=="0005", MODE="0666"  # EV3
+```
+
+Replug after adding it. For Bluetooth on Linux, pair the brick and bind a serial
+device with `sudo rfcomm bind 0 <brick address>`, then pick `/dev/rfcomm0`.
+
 ## Using the Python library
 
 ```python

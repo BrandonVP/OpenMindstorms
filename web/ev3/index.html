@@ -65,9 +65,11 @@
             </div>
             <div class="row" style="margin-top:12px"><button class="btn primary" id="btnConnect">Connect</button></div>
             <details class="help">
-              <summary>Help</summary>
+              <summary>Connection help</summary>
               <p><b>USB:</b> plug in, switch on, press Connect and pick "LEGO MINDSTORMS EV3" in the browser's picker. If the picker shows nothing, another program (the LEGO app, a previous tab) may be holding the brick.</p>
               <p><b>Bluetooth:</b> on the brick: Settings → Bluetooth → Bluetooth on, Visibility on. Windows: Settings → Bluetooth → Add device → the brick → confirm the passkey on the brick. Then use the COM port marked <i>outgoing</i> in Device Manager. The brick shows up under its <b>brick name</b>, not as "LEGO" or "EV3": the factory name is <code>EV3</code>, but a renamed brick appears under that name (for example <code>STU</code>). The Brick panel on the right shows the name once connected, and you can change it there.</p>
+              <p><b>macOS:</b> nothing to install. USB works as above. Bluetooth: System Settings → Bluetooth → Connect to the brick (confirm the passkey on the brick), then Connect here and pick the port named after the brick. Safari does not work; use Chrome or Edge.</p>
+              <p><b>Linux:</b> USB needs a udev rule so the browser may open the brick, for example <code>KERNEL=="hidraw*", ATTRS{idVendor}=="0694", ATTRS{idProduct}=="0005", MODE="0666"</code> in <code>/etc/udev/rules.d/50-ev3.rules</code>, then replug. Bluetooth: pair, then <code>sudo rfcomm bind 0 &lt;brick address&gt;</code> and pick <code>/dev/rfcomm0</code>.</p>
               <p><b>Python instead of blocks?</b> <a href="https://code.pybricks.com/" target="_blank" rel="noopener">Pybricks</a> runs natively on the EV3 (installed from the browser over USB, reversible). A brick running Pybricks no longer speaks the LEGO protocol, so it will not connect here until LEGO firmware is restored.</p>
             </details>
           </div>
