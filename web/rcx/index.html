@@ -42,9 +42,9 @@
           <div class="panel">
             <h3>Tower</h3>
             <div class="stack" id="towerChoices">
-              <label class="choice"><input type="radio" name="tower" value="diy" checked><span><b>OpenRCX DIY tower</b><small>Teensy / ESP32 board on a USB COM port. No echo.</small></span></label>
-              <label class="choice"><input type="radio" name="tower" value="serial"><span><b>LEGO serial tower (9713)</b><small>RS-232 tower on a COM port or USB-serial adapter, 9 V battery inside. Echo expected.</small></span></label>
+              <label class="choice"><input type="radio" name="tower" value="serial" checked><span><b>LEGO serial tower (9713)</b><small>RS-232 tower on a COM port or USB-serial adapter, 9 V battery inside. Echo expected. Verified on a real RCX.</small></span></label>
               <label class="choice"><input type="radio" name="tower" value="usb"><span><b>LEGO USB tower</b><small>From Robotics Invention System 2.0. Needs the WinUSB driver (Zadig) instead of LEGO's. Untested.</small></span></label>
+              <label class="choice"><input type="radio" name="tower" value="diy"><span><b>OpenRCX DIY tower</b><small>Build your own from a Teensy or ESP32, an IR LED and a 38 kHz receiver. Appears as a USB COM port, no driver. <a href="tower/" target="_blank" rel="noopener">Build guide and sketch</a></small></span></label>
               <label class="choice"><input type="radio" name="tower" value="sim"><span><b>Simulator</b><small>A software RCX inside this page. Try everything with no hardware.</small></span></label>
             </div>
             <div class="row" style="margin-top:12px">
@@ -57,7 +57,7 @@
               <p><b>Serial tower on a Prolific USB-serial cable:</b> if the COM port is named "PL2303TA DO NOT SUPPORT WINDOWS 11", Windows Update gave it the driver that refuses older chips. Install the older driver from
                 <a href="https://github.com/BrandonVP/Prolific" target="_blank" rel="noopener">github.com/BrandonVP/Prolific</a>: Device Manager → the port → Update driver → Browse my computer → Let me pick → Have Disk → the folder extracted from <code>PL2303_Prolific_v3.8.38.2.cab</code> (black/newer cables) or, for grey/older cables, run <code>PL2303_Prolific_v3.3.2.105.exe</code> and pick the 2008 driver. Then block driver auto-update (Device Installation Settings → No).</p>
               <p><b>LEGO USB tower:</b> LEGO's driver is 32-bit only. Install the generic WinUSB driver with <a href="https://zadig.akeo.ie/" target="_blank" rel="noopener">Zadig</a>: Options → List All Devices → "LEGO USB Tower" (0694 0001) → target WinUSB → Replace Driver.</p>
-              <p><b>OpenRCX DIY tower:</b> no driver needed; Teensy and ESP32 boards use Windows' built-in USB serial driver.</p>
+              <p><b>OpenRCX DIY tower:</b> no driver needed; Teensy and ESP32 boards use Windows' built-in USB serial driver. Parts, wiring and the Arduino sketch are on the <a href="tower/" target="_blank" rel="noopener">tower build page</a>.</p>
               <p>Full instructions: <a href="https://github.com/BrandonVP/OpenMindstorms#drivers" target="_blank" rel="noopener">OpenRCX README, Drivers</a>.</p>
             </details>
           </div>

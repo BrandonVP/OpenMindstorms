@@ -558,7 +558,7 @@
       const dis = (r.value === 'diy' || r.value === 'serial') ? !serialOk : r.value === 'usb' ? !usbOk : false;
       r.disabled = dis; r.closest('.choice').classList.toggle('disabled', dis);
     });
-    const savedTower = store.get('tower', serialOk ? 'diy' : 'sim');
+    const savedTower = store.get('tower', serialOk ? 'serial' : 'sim');   // the LEGO serial tower is the common, verified case
     const radio = document.querySelector('input[name=tower][value="' + savedTower + '"]');
     if (radio && !radio.disabled) radio.checked = true; else if (!serialOk) document.querySelector('input[name=tower][value=sim]').checked = true;
     $('usbRangeWrap').hidden = towerKind() !== 'usb';

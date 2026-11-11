@@ -52,8 +52,9 @@ picks `diy` for a Teensy/Espressif port and `serial` for a USB-serial adapter.
 
 ## Quick start
 
-1. **Pick a tower** from the table above. For the DIY tower, parts list, schematic
-   and flashing steps are in [tower/README.md](tower/README.md).
+1. **Pick a tower** from the table above. The LEGO serial tower is the default and
+   the verified one. For the DIY tower, parts list, schematic and flashing steps are
+   in [tower/README.md](tower/README.md) or on the site at `/rcx/tower/`.
 2. **Install the PC tool** (Python 3.9+):
 
    ```

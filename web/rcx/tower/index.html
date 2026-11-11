@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenRCX Tower: build guide</title>
+<meta name="description" content="Build a LEGO Mindstorms RCX infrared tower from a Teensy or ESP32, one IR LED and one 38 kHz receiver. Parts, wiring, flashing and the Arduino sketch.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../shared/workbench.css">
+<style>
+/* A single long-form page in the Workbench's visual language: same tokens, same type, no rail. */
+.app { grid-template-rows: auto 1fr; }
+.topbar .back { margin-left: auto; font-size: 13px; color: var(--muted); text-decoration: none; }
+.topbar .back:hover { color: var(--ink); }
+.doc { min-width: 0; overflow: auto; padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.doc > * { max-width: 860px; margin-left: auto; margin-right: auto; }
+.doc h1 { font-size: 30px; font-weight: 700; line-height: 1.15; }
+.doc .lede { color: var(--muted); font-size: 16px; line-height: 1.55; margin: 10px auto 22px; max-width: 860px; }
+.doc section { margin-top: 28px; }
+.doc section > h2 { font-size: 20px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.doc p, .doc li { line-height: 1.6; max-width: 70ch; }
+.doc p { margin: 8px 0; }
+.doc ul, .doc ol { padding-left: 22px; margin: 8px 0; }
+.doc a { color: var(--focus); }
+.doc code { font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+.doc pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.45; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; overflow-x: auto; margin: 8px 0; }
+.doc pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+.doc table td:first-child, .doc table th:first-child { white-space: nowrap; }
+.doc .tablewrap { max-height: none; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; padding: 0; list-style: none; }
+.toc a { text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.callout { display: flex; gap: 10px; align-items: flex-start; }
+.callout .panel { flex: 1; }
+.schematic { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; overflow-x: auto; }
+.schematic svg { display: block; width: 100%; height: auto; max-width: 100%; min-width: 560px; font-family: var(--mono); font-size: 12px; }
+.schematic .wire { stroke: var(--ink); stroke-width: 1.6; fill: none; }
+.schematic .part { stroke: var(--ink); stroke-width: 1.6; fill: var(--surface-2); }
+.schematic .board { fill: color-mix(in srgb, var(--good) 22%, var(--surface-2)); }
+.schematic .ir { fill: color-mix(in srgb, var(--bad) 30%, var(--surface-2)); }
+.schematic .dome { fill: var(--ink); opacity: .75; }
+.schematic text { fill: var(--ink); }
+.schematic .lbl { fill: var(--muted); font-size: 11px; }
+.schematic .pin { fill: var(--ink); }
+.schematic .junction { fill: var(--ink); }
+.sketch-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 6px; }
+.sketch-head .name { font-family: var(--mono); font-size: 13px; }
+.sketch-head .btn { margin-left: 0; }
+.sketch-head .spacer { flex: 1; }
+#sketch { max-height: 520px; overflow: auto; tab-size: 2; }
+.doc .mini { font-size: 12.5px; color: var(--muted); }
+footer.foot { margin-top: 40px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+@media (max-width: 760px) { .doc h1 { font-size: 24px; } }
+</style>
+</head>
+<body data-app="rcx">
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><a class="home" href="../../" title="OpenMindstorms home">&#8962;</a><span class="brick" aria-hidden="true"></span> OpenRCX Tower</div>
+    <a class="back" href="../">&larr; Back to the OpenRCX Workbench</a>
+  </div>
+
+  <main class="doc">
+    <h1>Build your own RCX infrared tower</h1>
+    <p class="lede">A replacement for the LEGO infrared tower, built from a Teensy 4.x or ESP32 you may already have, one 940 nm IR LED and one 38 kHz IR receiver module. The PC sees a plain USB serial port, so it works with the OpenRCX Workbench, with the <code>rcx</code> command-line tool, and with BricxCC and NQC on 64-bit Windows or anything else that knows how to drive a LEGO <em>serial</em> tower.</p>
+
+    <ul class="toc">
+      <li><a href="#why">Why</a></li>
+      <li><a href="#parts">Parts</a></li>
+      <li><a href="#wiring">Wiring</a></li>
+      <li><a href="#flash">Build and flash</a></li>
+      <li><a href="#options">Options</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#test">Testing</a></li>
+      <li><a href="#sketch">The sketch</a></li>
+    </ul>
+
+    <section id="why">
+      <h2>Why</h2>
+      <p>The RCX talks over infrared at 2400 baud, 8 data bits, odd parity, 1 stop bit. A <code>0</code> bit is 417 µs of 38 kHz carrier, a <code>1</code> bit is 417 µs of darkness. The LEGO <em>serial</em> tower is just a modulator and demodulator on an RS-232 port. The LEGO <em>USB</em> tower needs a kernel driver that LEGO only ever shipped for 32-bit Windows, which is why a Windows XP virtual machine has been the usual workaround.</p>
+      <p>If you still have a LEGO serial tower, use it: it needs no driver work and the Workbench defaults to it. This board is for everyone whose tower was the USB one, or who has no tower at all.</p>
+    </section>
+
+    <section id="parts">
+      <h2>Parts</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Part</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Teensy 4.0 or 4.1</td><td>Any board with a hardware UART and PWM works; ESP32 / ESP32-S3 is a supported alternate target</td></tr>
+          <tr><td>IR receiver module, 38 kHz</td><td>Vishay <b>TSOP38238</b> or TSOP4838, or the cheap <b>VS1838B</b> found in Arduino starter kits</td></tr>
+          <tr><td>IR LED, 940 nm</td><td>Vishay <b>TSAL6200</b> (narrow beam, long range) or TSAL6400 (wider). Any 940 nm LED works at short range</td></tr>
+          <tr><td>NPN transistor</td><td>2N2222, 2N3904, PN2222 or similar</td></tr>
+          <tr><td>Resistors</td><td>1 kΩ (transistor base), 33 to 47 Ω (LED, 1/4 W)</td></tr>
+          <tr><td>Optional</td><td>100 Ω + 4.7 µF on the receiver's supply pin, as the Vishay datasheet recommends</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="wiring">
+      <h2>Wiring (Teensy 4.0 default pins)</h2>
+      <div class="schematic" role="img" aria-label="Schematic: TSOP38238 output to Teensy pin 0, powered from 3.3 V; Teensy pin 2 through 1 kilohm to the base of a 2N2222; collector to the IR LED cathode; LED anode through 33 to 47 ohm to VUSB 5 V; emitter to ground.">
+        <svg viewBox="0 0 760 380" xmlns="http://www.w3.org/2000/svg">
+          <!-- Teensy -->
+          <rect class="part board" x="40" y="40" width="170" height="305" rx="8"/>
+          <rect class="part" x="100" y="22" width="50" height="18" rx="3"/>
+          <text x="125" y="70" text-anchor="middle" font-weight="600">Teensy 4.0</text>
+          <text class="lbl" x="125" y="86" text-anchor="middle">USB to the PC</text>
+          <g>
+            <rect class="pin" x="206" y="113" width="10" height="4"/><text class="lbl" x="200" y="119" text-anchor="end">pin 0 (RX1)</text>
+            <rect class="pin" x="206" y="143" width="10" height="4"/><text class="lbl" x="200" y="149" text-anchor="end">3.3V</text>
+            <rect class="pin" x="206" y="183" width="10" height="4"/><text class="lbl" x="200" y="189" text-anchor="end">VUSB (5V)</text>
+            <rect class="pin" x="206" y="290" width="10" height="4"/><text class="lbl" x="200" y="296" text-anchor="end">pin 2 (PWM)</text>
+            <rect class="pin" x="206" y="323" width="10" height="4"/><text class="lbl" x="200" y="329" text-anchor="end">GND</text>
+          </g>
+
+          <!-- TSOP38238 receiver: legs OUT, GND, VS left to right looking at the lens -->
+          <text class="lbl" x="620" y="16" text-anchor="middle">38 kHz IR receiver</text>
+          <rect class="part ir" x="560" y="24" width="120" height="74" rx="6"/>
+          <circle class="dome" cx="620" cy="44" r="10"/>
+          <text x="620" y="72" text-anchor="middle" font-weight="600">TSOP38238</text>
+          <text class="lbl" x="585" y="91" text-anchor="middle">OUT</text>
+          <text class="lbl" x="620" y="91" text-anchor="middle">GND</text>
+          <text class="lbl" x="655" y="91" text-anchor="middle">VS</text>
+          <!-- OUT -> pin 0 -->
+          <path class="wire" d="M585 98 V115 H216"/>
+          <!-- VS -> 3.3V -->
+          <path class="wire" d="M655 98 V145 H216"/>
+          <!-- GND leg -> ground rail, hopping over the VS wire -->
+          <path class="wire" d="M620 98 V139 A6 6 0 0 1 620 151 V165 H720 V350"/>
+
+          <!-- LED driver -->
+          <!-- VUSB -> 33-47 ohm -> LED anode -->
+          <path class="wire" d="M216 185 H452 V190"/>
+          <rect class="part" x="444" y="190" width="16" height="30" rx="3"/><text class="lbl" x="470" y="209">33–47 Ω</text>
+          <path class="wire" d="M452 220 V226"/>
+          <!-- IR LED, anode up, cathode down -->
+          <path class="part ir" d="M440 226 H464 L452 248 Z"/>
+          <path class="wire" d="M440 248 H464"/>
+          <path class="wire" d="M466 232 L478 220 M466 242 L478 230"/>
+          <text class="lbl" x="488" y="236">IR LED 940 nm</text>
+          <text class="lbl" x="488" y="250">TSAL6200</text>
+          <!-- cathode -> collector -->
+          <path class="wire" d="M452 248 V272"/>
+          <!-- 2N2222 -->
+          <circle class="part" cx="445" cy="292" r="26"/>
+          <path class="wire" d="M432 278 V306"/>
+          <path class="wire" d="M432 286 L452 272"/>
+          <path class="wire" d="M432 298 L452 312 V318"/>
+          <path class="junction" d="M446 310 L452 320 L442 317 Z"/>
+          <text class="lbl" x="478" y="296">2N2222</text>
+          <text class="lbl" x="456" y="268">C</text>
+          <text class="lbl" x="456" y="332">E</text>
+          <!-- pin 2 -> 1 k -> base -->
+          <path class="wire" d="M216 292 H330"/>
+          <rect class="part" x="330" y="284" width="50" height="16" rx="3"/><text class="lbl" x="355" y="316" text-anchor="middle">1 kΩ</text>
+          <path class="wire" d="M380 292 H432"/>
+          <!-- emitter -> ground rail -->
+          <path class="wire" d="M452 318 V350"/>
+
+          <!-- ground rail -->
+          <path class="wire" d="M216 325 H245 V350 H720"/>
+          <circle class="junction" cx="452" cy="350" r="3"/>
+          <circle class="junction" cx="720" cy="350" r="3"/>
+          <path class="wire" d="M500 350 V360 M490 360 H510 M494 366 H506"/>
+          <text class="lbl" x="500" y="378" text-anchor="middle">GND</text>
+        </svg>
+      </div>
+      <p>The receiver's output idles high and goes low while carrier is present, which is exactly a UART signal, so it goes straight into a hardware UART RX pin set to 2400 8-O-1. The 38 kHz carrier comes from a hardware PWM channel switched by the transistor; the LED draws around 100 mA peak at 50 % duty and is off between packets.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Signal</th><th>Teensy 4.x</th><th>ESP32 default</th><th>Define</th></tr></thead>
+        <tbody>
+          <tr><td>Receiver OUT</td><td>pin 0 (Serial1 RX)</td><td>GPIO 18</td><td><code>IR_RX_PIN</code></td></tr>
+          <tr><td>Carrier to transistor base</td><td>pin 2 (PWM)</td><td>GPIO 17</td><td><code>IR_TX_PIN</code></td></tr>
+          <tr><td>Activity LED</td><td>pin 13 (on-board)</td><td>−1 (none; set yours)</td><td><code>ACT_LED_PIN</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>Pins are <code>#define</code>s at the top of the sketch. Mount the LED and the receiver side by side pointing the same way. Work 5 to 50 cm from the RCX's IR window and shade both ends from sunlight and bright incandescent lamps; that is the number-one cause of failed downloads with the LEGO towers too. The on-board LED blinks three times at power-up and flashes on IR activity.</p>
+    </section>
+
+    <section id="flash">
+      <h2>Build and flash</h2>
+      <ul>
+        <li><b>Arduino IDE with Teensyduino:</b> open <code>OpenRCX_Tower.ino</code>, board <em>Teensy 4.0</em>, USB Type <em>Serial</em>, upload.</li>
+        <li><b>Visual Micro:</b> open the folder as an Arduino project, same settings.</li>
+        <li><b>arduino-cli:</b>
+<pre><code>arduino-cli compile --fqbn teensy:avr:teensy40 tower/OpenRCX_Tower
+arduino-cli upload  --fqbn teensy:avr:teensy40 -p COMx tower/OpenRCX_Tower</code></pre>
+          ESP32-S3 with native USB: <code>--fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc</code>.</li>
+      </ul>
+      <p class="mini">On a PC with <b>Windows Smart App Control</b> enforced, the Teensy toolchain's unsigned linker (<code>collect2.exe</code>) is blocked, so the build compiles but fails to link. The ESP32 toolchain is not affected. Build the Teensy image on another PC, or allow the toolchain.</p>
+      <p>Then plug the board in, open the <a href="../">OpenRCX Workbench</a>, choose <em>OpenRCX DIY tower</em> and press Connect. No driver is needed: Teensy and ESP32 boards use Windows' built-in USB serial driver.</p>
+    </section>
+
+    <section id="options">
+      <h2>Options at the top of the sketch</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Define</th><th>Default</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>CARRIER_HZ</code></td><td>38000</td><td>IR carrier. The RCX 2.0 brick's receiver is reportedly tuned for 76 kHz, but every RCX revision accepts 38 kHz (that is all the serial tower can do). Try 76000 only if range is poor</td></tr>
+          <tr><td><code>ECHO_MODE</code></td><td>0</td><td>0 swallows the echo of our own LED that the receiver inevitably hears; 1 passes it to the PC like a real serial tower would</td></tr>
+          <tr><td><code>TX_BUFFER_SIZE</code></td><td>4096</td><td>Host-to-IR buffer. A firmware block packet is about 415 bytes</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="how">
+      <h2>How it works</h2>
+      <ul>
+        <li><b>Transmit:</b> bytes from USB are queued; each is bit-banged as an 11-bit frame (start, 8 data, odd parity, stop) with timing referenced to the frame start so rounding never accumulates. The carrier itself comes from hardware PWM (Teensy <code>analogWrite</code>, ESP32 LEDC), simply switched on for <code>0</code> bits and off for <code>1</code> bits.</li>
+        <li><b>Receive:</b> the receiver module's output is already a clean UART waveform, so a hardware UART at 2400 8-O-1 reads it and the bytes are forwarded to USB.</li>
+        <li><b>Echo suppression:</b> every transmitted byte is remembered for 20 ms. Received bytes that match the head of that queue are dropped; the first mismatch stops the filtering, so a genuine RCX reply is never eaten.</li>
+      </ul>
+    </section>
+
+    <section id="test">
+      <h2>Testing without an RCX</h2>
+      <p>Open the COM port with any terminal program at any baud and type: the activity LED should flash, and the IR LED shows as a faint purple flicker on a phone camera. With <code>ECHO_MODE 1</code> the characters you type come back to you through the receiver, which checks the whole optical path.</p>
+      <p>With a real RCX in front of the tower, <code>rcx -p COMx ping</code> from the command-line tool should answer within one retry, and the Workbench's Connect shows the ROM and firmware versions.</p>
+    </section>
+
+    <section id="sketch">
+      <h2>The sketch</h2>
+      <p>One file, no libraries beyond the board package. It is the same file as <a href="https://github.com/BrandonVP/OpenMindstorms/tree/main/tower" target="_blank" rel="noopener">tower/OpenRCX_Tower</a> in the repository.</p>
+      <div class="sketch-head">
+        <span class="name">OpenRCX_Tower.ino</span>
+        <span class="muted small" id="sketchMeta"></span>
+        <span class="spacer"></span>
+        <button class="btn sm" id="btnCopy" disabled>Copy</button>
+        <button class="btn sm primary" id="btnDownload" disabled>Download .ino</button>
+      </div>
+      <pre id="sketch"><code>Loading…</code></pre>
+      <p class="mini" id="sketchNote" hidden></p>
+    </section>
+
+    <footer class="foot">
+      Part of <a href="../../">OpenMindstorms</a>, open source (MIT) on <a href="https://github.com/BrandonVP/OpenMindstorms" target="_blank" rel="noopener">GitHub</a>. Not affiliated with the LEGO Group. LEGO and Mindstorms are trademarks of the LEGO Group.
+    </footer>
+  </main>
+</div>
+
+<script src="../../shared/stats.js"></script>
+<script>
+(function () {
+  'use strict';
+  // The sketch is served next to the site (/tower/...) and, as a fallback, read from GitHub.
+  var LOCAL = '../../tower/OpenRCX_Tower/OpenRCX_Tower.ino';
+  var RAW = 'https://raw.githubusercontent.com/BrandonVP/OpenMindstorms/main/tower/OpenRCX_Tower/OpenRCX_Tower.ino';
+  var pre = document.getElementById('sketch'), code = pre.querySelector('code');
+  var meta = document.getElementById('sketchMeta'), note = document.getElementById('sketchNote');
+  var bCopy = document.getElementById('btnCopy'), bDl = document.getElementById('btnDownload');
+  var text = '';
+
+  function load(url) {
+    return fetch(url, { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status + ' ' + url);
+      return r.text();
+    }).then(function (t) {
+      if (!/void\s+loop\s*\(/.test(t)) throw new Error('not the sketch: ' + url);
+      return t;
+    });
+  }
+
+  load(LOCAL).catch(function () { return load(RAW); }).then(function (t) {
+    text = t.replace(/\r\n/g, '\n');
+    code.textContent = text;
+    meta.textContent = text.split('\n').length + ' lines · ' + (text.length / 1024).toFixed(1) + ' KB';
+    bCopy.disabled = false; bDl.disabled = false;
+  }).catch(function () {
+    code.textContent = 'The sketch could not be loaded here.';
+    note.hidden = false;
+    note.innerHTML = 'Open it on GitHub instead: <a href="https://github.com/BrandonVP/OpenMindstorms/blob/main/tower/OpenRCX_Tower/OpenRCX_Tower.ino" target="_blank" rel="noopener">OpenRCX_Tower.ino</a>.';
+  });
+
+  bCopy.addEventListener('click', function () {
+    var done = function () { bCopy.textContent = 'Copied'; setTimeout(function () { bCopy.textContent = 'Copy'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { selectAll(); });
+    else selectAll();
+    function selectAll() { var r = document.createRange(); r.selectNodeContents(code); var s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  });
+  bDl.addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    a.download = 'OpenRCX_Tower.ino';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    if (window.OMStats) OMStats.hit('file', 'tower-ino');
+  });
+})();
+</script>
+</body>
+</html>

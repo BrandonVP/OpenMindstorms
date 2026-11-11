@@ -61,5 +61,6 @@
   window.addEventListener('pagehide', endSession);
 
   window.OMStats = { hit, enabled, app, vid: vid.slice(0, 4) + '…' };
-  hit('page_view', (location.hash || '').slice(1, 17));
+  // detail: the hash, or the sub-page inside the app (e.g. rcx/tower -> 'tower')
+  hit('page_view', (location.hash || '').slice(1, 17) || (location.pathname.split('/').filter(Boolean)[1] || '').replace(/\.html$/, '').slice(0, 17));
 })();

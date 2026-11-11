@@ -1,6 +1,6 @@
 .git
 python/
-tower/
+tower/README.md
 tools/
 firmware/
 *.rcx

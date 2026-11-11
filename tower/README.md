@@ -1,5 +1,8 @@
 # OpenRCX Tower
 
+This guide, with a drawn schematic and the sketch ready to download, is also on the
+site: [www.openmindstorms.com/rcx/tower/](https://www.openmindstorms.com/rcx/tower/).
+
 A replacement for the LEGO infrared tower, built from a Teensy 4.x (or ESP32) you
 already have, one 940 nm IR LED and one 38 kHz IR receiver module. The PC sees a
 plain USB serial port, so it works with OpenRCX's `rcx` tool, with BricxCC and NQC

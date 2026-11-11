@@ -21,6 +21,8 @@ RUN sed -i 's/\r$//' /docker-entrypoint.d/10-gen-cert.sh /etc/nginx/conf.d/defau
 # Only what the browser needs: the site, and the docs it links to.
 COPY web/ /usr/share/nginx/html/
 COPY docs/ /usr/share/nginx/html/docs/
+# The DIY tower sketch, shown and downloaded by /rcx/tower/
+COPY tower/ /usr/share/nginx/html/tower/
 # Files copied onto the NAS share over SMB arrive owner-only (0600/0700) and COPY
 # keeps those modes; nginx's worker runs as user "nginx", so open them up.
 RUN chmod -R a+rX /usr/share/nginx/html
