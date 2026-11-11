@@ -6,6 +6,10 @@
 #
 #   /mnt/apps/configs/openrcx/src    = \\TRUENAS\openrcx\src    (source to build)
 #   /mnt/apps/configs/openrcx/certs  = \\TRUENAS\openrcx\certs  (self-signed TLS cert, made on first start)
+#   /mnt/apps/configs/openrcx/stats  = \\TRUENAS\openrcx\stats  (usage counters database, stats.db)
+#
+# Usage dashboard: https://openrcx.vp/stats/ (or www.openmindstorms.com/stats/), opened
+# with the STATS_KEY below.  Pick any long random string before installing.
 #
 # OpenRCX gets its own address, 192.168.68.208 (an alias on the br0 bridge), and the
 # local DNS name openrcx.vp.
@@ -34,6 +38,7 @@ services:
       TZ: America/Chicago
     depends_on:
       - nxc
+      - stats
     restart: unless-stopped
 
   # NXC compile service for OpenNXT (the NXC compiler is a native program, so the
@@ -45,5 +50,20 @@ services:
     image: openrcx-nxc:local
     pull_policy: build
     environment:
+      TZ: America/Chicago
+    restart: unless-stopped
+
+  # Usage counters: anonymous events from the site into a SQLite file on the
+  # stats dataset; the dashboard at /stats/ reads them with STATS_KEY.
+  stats:
+    build:
+      context: /mnt/apps/configs/openrcx/src/truenas/stats-service
+      dockerfile: Dockerfile
+    image: openrcx-stats:local
+    pull_policy: build
+    volumes:
+      - /mnt/apps/configs/openrcx/stats:/data
+    environment:
+      STATS_KEY: change-me-to-a-long-random-string
       TZ: America/Chicago
     restart: unless-stopped

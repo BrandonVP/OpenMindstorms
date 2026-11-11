@@ -1,6 +1,9 @@
 /* OpenEV3 Workbench - UI wiring. */
 (function () {
   'use strict';
+  const hit = (e, d, ok, dur) => { try { if (window.OMStats) OMStats.hit(e, d, ok, dur); } catch (x) { /* counters never break the app */ } };
+  const STAT_EVENTS = [['Reading brick', null, ''], ['Sending program', 'program', 'rbf'], ['Uploading file', 'file', 'upload'], ['Delete', 'file', 'delete'], ['New folder', 'file', 'mkdir'], ['Running', 'run', 'now'], ['Run', 'run', 'uploaded']];
+  function stat(label, ok) { for (const [p, e, d] of STAT_EVENTS) if (label.startsWith(p)) { if (e) hit(e, d, ok); return; } hit('control', label.toLowerCase().slice(0, 32), ok); }
   const P = OpenEV3.protocol, T = OpenEV3.transports, S = OpenEV3.sim;
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -33,7 +36,7 @@
     if (!ev3) { toast('Connect to the brick first.', 'bad'); showView('connect'); return false; }
     if (ev3.busy) { toast('Busy, wait a moment.'); return false; }
     ev3.busy = true; setLink('busy', label || 'Working…');
-    try { await fn(); return true; } catch (e) { logNote(label + ': ' + errorText(e), 'err'); toast(errorText(e), 'bad'); return false; }
+    try { await fn(); stat(label, true); return true; } catch (e) { logNote(label + ': ' + errorText(e), 'err'); toast(errorText(e), 'bad'); stat(label, false); return false; }
     finally { ev3.busy = false; setLink('on', transport ? transport.name : ''); }
   }
 
@@ -47,14 +50,15 @@
       else if (kind === 'usb') transport = new T.HidTransport();
       else transport = new T.BluetoothSerialTransport();
       setLink('busy', 'Opening…'); await transport.open();
-    } catch (e) { transport = null; setLink('off', 'Not connected'); if (e && e.name === 'NotFoundError') { toast('No device chosen.'); return; } toast('Could not open the link: ' + errorText(e), 'bad', 9000); return; }
+    } catch (e) { transport = null; setLink('off', 'Not connected'); if (e && e.name === 'NotFoundError') { toast('No device chosen.'); return; } toast('Could not open the link: ' + errorText(e), 'bad', 9000); hit('connect', kind, false); return; }
     ev3 = new OpenEV3.EV3(transport, { log: logMsg });
     if (kind === 'bt') ev3.timeout = 3000;
     document.body.classList.remove('disconnected'); document.body.classList.toggle('sim', kind === 'sim');
     $('btnRefresh').hidden = false; $('btnDisconnect').hidden = false; $('btnConnect').disabled = true;
     $('infoLink').textContent = transport.name + ' (' + (transport.label || '') + ')';
     logNote('connected over ' + transport.name); setLink('on', transport.name);
-    if (await run('Reading brick', refreshInfo)) toast('Connected to ' + $('infoName').textContent, 'good');
+    const ok = await run('Reading brick', refreshInfo); hit('connect', kind, ok);
+    if (ok) toast('Connected to ' + $('infoName').textContent, 'good');
   }
   async function refreshInfo() {
     const i = await ev3.info();
@@ -194,7 +198,7 @@
   function progressUI(barId, textId, label) { const t0 = Date.now(); return (done, total) => { const pct = Math.round(100 * done / Math.max(1, total)); $(barId).style.width = pct + '%'; const el = Date.now() - t0, rate = done / Math.max(el, 1) * 1000; $(textId).textContent = label + ' ' + pct + '%  ' + done + '/' + total + ' B' + (done < total ? '  ETA ' + Math.ceil((total - done) / Math.max(rate, 1)) + ' s' : '  done in ' + (el / 1000).toFixed(1) + ' s'); }; }
   $('btnFilesRefresh').addEventListener('click', () => run('Listing files', listFiles));
   $('btnUploadFile').addEventListener('click', () => $('fileAny').click());
-  $('fileAny').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; e.target.value = ''; const data = new Uint8Array(await f.arrayBuffer()); $('progFile').style.width = '0%'; await run('Uploading ' + f.name, async () => { await ev3.upload(cwd + f.name, data, progressUI('progFile', 'progFileText', f.name)); await listFiles(); toast('Uploaded ' + f.name, 'good'); }); });
+  $('fileAny').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; e.target.value = ''; const data = new Uint8Array(await f.arrayBuffer()); $('progFile').style.width = '0%'; await run('Uploading file ' + f.name, async () => { await ev3.upload(cwd + f.name, data, progressUI('progFile', 'progFileText', f.name)); await listFiles(); toast('Uploaded ' + f.name, 'good'); }); });
   $('btnMkdir').addEventListener('click', () => run('New folder', async () => { const n = $('newDir').value.trim(); if (!n) throw new Error('enter a folder name'); await ev3.mkdir(cwd + n); $('newDir').value = ''; await listFiles(); }));
 
   /* ------------------------------------------------ console raw */
@@ -229,15 +233,15 @@
     store.set('mode', mode);
     if (mode === 'blocks') { ensureBlockly(); setTimeout(() => bws && Blockly.svgResize(bws), 0); }
   }
-  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setEditorMode(b.dataset.mode)));
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setEditorMode(b.dataset.mode); hit('editor_mode', b.dataset.mode); }));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
-  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '' || !Bk) return; const ex = Bk.examples[e.target.value]; loadBlocks(ex.json); $('progName').value = 'OpenEV3/' + ex.name.split(/[:(]/)[0].replace(/\s+/g, ''); e.target.value = ''; });
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '' || !Bk) return; const ex = Bk.examples[e.target.value]; hit('example', ex.name); loadBlocks(ex.json); $('progName').value = 'OpenEV3/' + ex.name.split(/[:(]/)[0].replace(/\s+/g, ''); e.target.value = ''; });
   $('btnBlocksNew').addEventListener('click', () => loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'ev3_program', x: 40, y: 40 }] } }));
   $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
   $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
   $('btnSaveBlocks').addEventListener('click', () => bws && saveBlob('program.ev3blocks.json', JSON.stringify(Blockly.serialization.workspaces.save(bws), null, 1), 'application/json'));
   function setOut(lines) { const out = $('buildOut'); out.innerHTML = ''; lines.forEach(([cls, t]) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; out.appendChild(s); }); }
-  function build() { refreshGenerated(); if (!built) { setOut([['e', $('genCode').textContent]]); return null; } setOut([['ok', 'Built: ' + built.main.length + ' bytes of bytecode, ' + built.globals + ' global bytes, ' + built.threads.length + ' thread' + (built.threads.length === 1 ? '' : 's')]]); return built; }
+  function build() { refreshGenerated(); hit('compile', 'blocks', !!built); if (!built) { setOut([['e', $('genCode').textContent]]); return null; } setOut([['ok', 'Built: ' + built.main.length + ' bytes of bytecode, ' + built.globals + ' global bytes, ' + built.threads.length + ' thread' + (built.threads.length === 1 ? '' : 's')]]); return built; }
   function progPath() { let n = $('progName').value.trim().replace(/\.rbf$/i, ''); if (!n.includes('/')) n = 'OpenEV3/' + n; return n; }
   $('btnRunNow').addEventListener('click', async () => {
     const b = build(); if (!b) return;
@@ -249,7 +253,7 @@
   async function uploadProgram() {
     const b = build(); if (!b) return false;
     const name = progPath() + '.rbf'; $('progUpload').style.width = '0%';
-    return run('Uploading', async () => {
+    return run('Sending program ' + name, async () => {
       const dir = name.split('/').slice(0, -1).join('/'); try { await ev3.mkdir(dir); } catch (e) { /* exists */ }
       await ev3.upload(name, b.rbf, progressUI('progUpload', 'progUploadText', name));
       setOut([['ok', 'Uploaded ' + name + ' (' + b.rbf.length + ' bytes). On the brick: File Navigation > ' + dir.replace(/^OpenEV3$/, 'OpenEV3') + ' > ' + name.split('/').pop().replace('.rbf', '')]]);

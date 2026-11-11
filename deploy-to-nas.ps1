@@ -21,6 +21,7 @@ Expand-Archive -Path $zip -DestinationPath $dest
 Remove-Item $zip
 
 New-Item -ItemType Directory -Force (Join-Path $Share 'certs') | Out-Null
+New-Item -ItemType Directory -Force (Join-Path $Share 'stats') | Out-Null   # usage counters database
 Copy-Item (Join-Path $repo 'truenas\openrcx-app.yaml') (Join-Path $Share 'openrcx-app.yaml') -Force
 
 $commit = git -C $repo log -1 --format='%h %s'

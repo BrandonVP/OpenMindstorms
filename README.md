@@ -216,6 +216,27 @@ The app has two containers: `openrcx` (nginx, the site) and `nxc` (the NXC compi
 behind `/api/nxc`, used by OpenNXT). When the YAML changes, update it in TrueNAS under
 Apps > openrcx > Edit before Stop/Start.
 
+### Usage counters and the dashboard
+
+The site keeps anonymous usage counts so you can see what people actually do:
+page views and visitors, connections by brick and link type (with failures),
+compiles, programs sent to a brick, runs, firmware installs, file operations,
+editor-mode switches, examples opened, Control-panel use and time on site.
+`web/shared/stats.js` posts tiny events to `/api/stats/event`; the `stats`
+container (`truenas/stats-service/`, Python standard library + SQLite on the
+`stats` dataset) stores them. Nothing identifying is kept: no IP addresses, no
+cookies, no program contents; visitors are a random id in the browser's
+localStorage; Do Not Track and Global Privacy Control switch it off, as does
+opening any page once with `?stats=off`. Pages opened from a local file never
+send anything.
+
+The dashboard is at `/stats/` on the site and asks for the key set as
+`STATS_KEY` in `truenas/openrcx-app.yaml` (pick a long random string before
+installing; the key is sent in a header and kept only in your browser). It shows
+range totals against all-time totals, a per-day chart, per-app and per-link
+breakdowns, browsers and operating systems, failures, and the newest events, and
+can download the raw events as CSV.
+
 ### Public site: www.openmindstorms.com through the Cloudflare tunnel
 
 The same Cloudflare tunnel that publishes Empires of Rome can publish this site; the

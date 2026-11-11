@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>OpenMindstorms usage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap">
+<link rel="stylesheet" href="../shared/workbench.css">
+<style>
+:root { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #9085e9; }
+body { background: var(--bg); color: var(--ink); margin: 0; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 20px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-family: var(--display); font-size: 24px; margin: 0; }
+h1 small { font-size: 13px; color: var(--muted); font-family: inherit; font-weight: 500; margin-left: 10px; }
+.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.top .row { gap: 6px; }
+.ranges button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
+.tile .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.tile .v { font-family: var(--display); font-size: 28px; font-weight: 700; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.tile .a { font-size: 12px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; min-width: 0; }
+.panel.wide { grid-column: 1 / -1; }
+.panel h2 { font-family: var(--display); font-size: 14px; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 10px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.panel h2 span { font-family: var(--body, inherit); text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+.axis { stroke: var(--line); stroke-width: 1; }
+.tick { fill: var(--muted); font-size: 10px; }
+.lbl { fill: var(--ink); font-size: 11px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.tip { position: fixed; pointer-events: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 9px; font-size: 12px; z-index: 5; display: none; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+.bad { color: var(--bad); }
+.hbar { display: grid; grid-template-columns: 7em 1fr 3em; gap: 8px; align-items: center; font-size: 12.5px; margin: 4px 0; }
+.hbar .bar { height: 10px; background: var(--s1); border-radius: 0 3px 3px 0; min-width: 2px; }
+.hbar .n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.note { font-size: 12px; color: var(--muted); margin-top: 14px; }
+.gate { max-width: 460px; margin: 60px auto; }
+#err { color: var(--bad); margin: 10px 0; }
+@media (max-width: 600px) { .tile .v { font-size: 22px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>OpenMindstorms usage <small id="meta"></small></h1>
+    <div class="row ranges" id="ranges">
+      <button class="btn" data-days="7">7 days</button><button class="btn" data-days="30" aria-pressed="true">30 days</button><button class="btn" data-days="90">90 days</button><button class="btn" data-days="365">Year</button>
+      <button class="btn" id="btnCsv" title="Download the newest 5000 raw events">CSV</button>
+      <button class="btn" id="btnKey" title="Forget the key on this browser">Sign out</button>
+    </div>
+  </div>
+
+  <div class="gate panel" id="gate">
+    <h2>Dashboard key</h2>
+    <p style="font-size:13px;color:var(--muted)">The key is <code>STATS_KEY</code> in the app YAML on TrueNAS. It is kept in this browser only.</p>
+    <div class="row"><input type="password" id="key" style="flex:1" placeholder="key"><button class="btn primary" id="btnGo">Open</button></div>
+    <div id="err"></div>
+  </div>
+
+  <div id="dash" hidden>
+    <div class="tiles" id="tiles"></div>
+    <div class="grid">
+      <div class="panel wide"><h2>Per day <span>visitors are distinct browsers that loaded a page; programs are block or text programs sent to a brick</span></h2><div id="daily"></div></div>
+      <div class="panel"><h2>By app <span>in range</span></h2><div id="byApp"></div></div>
+      <div class="panel"><h2>Connections by link <span>successful, in range</span></h2><div id="links"></div></div>
+      <div class="panel"><h2>Browsers <span>visitors</span></h2><div id="browsers"></div></div>
+      <div class="panel"><h2>Operating systems <span>visitors</span></h2><div id="oses"></div></div>
+      <div class="panel"><h2>Editor modes <span>switches, in range</span></h2><div id="modes"></div></div>
+      <div class="panel"><h2>Examples opened</h2><div id="examples" class="scroll"></div></div>
+      <div class="panel"><h2>Control panel use</h2><div id="controls" class="scroll"></div></div>
+      <div class="panel"><h2>Failures <span>connects, compiles, uploads that did not work</span></h2><div id="errors" class="scroll"></div></div>
+      <div class="panel wide"><h2>Newest events <span>all apps</span></h2><div id="recent" class="scroll"></div></div>
+    </div>
+    <p class="note" id="foot"></p>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const q = new URLSearchParams(location.search);
+  const API = q.get('api') || '/api/stats';
+  const APPS = ['home', 'rcx', 'nxt', 'ev3'];
+  const APP_NAMES = { home: 'Home', rcx: 'OpenRCX', nxt: 'OpenNXT', ev3: 'OpenEV3' };
+  const LINKS = [['usb', 'USB'], ['serial', 'Serial tower'], ['bt', 'Bluetooth'], ['sim', 'Simulator'], ['diy', 'DIY tower']];
+  const LINK_COLOR = { usb: 'var(--s1)', serial: 'var(--s2)', bt: 'var(--s3)', sim: 'var(--s4)', diy: 'var(--s5)' };
+  let key = q.get('key') || ''; if (!key) { try { key = localStorage.getItem('om.statskey') || ''; } catch (e) { /* ignore */ } }
+  let days = 30;
+  const fmt = n => (n == null ? '-' : Number(n).toLocaleString());
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hms = s => { s = Number(s) || 0; if (s < 90) return s + ' s'; if (s < 5400) return Math.round(s / 60) + ' min'; return (s / 3600).toFixed(1) + ' h'; };
+
+  async function api(path) {
+    const r = await fetch(API + path, { headers: { 'X-Stats-Key': key } });
+    if (r.status === 401) throw new Error('That key was not accepted.');
+    if (r.status === 503) throw new Error('STATS_KEY is not set on the server: add it to the app YAML.');
+    if (!r.ok) throw new Error('Server answered HTTP ' + r.status);
+    return r.json();
+  }
+
+  // ---------- charts (inline SVG, no library)
+  const tip = $('tip');
+  function showTip(e, html) { tip.innerHTML = html; tip.style.display = 'block'; const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8), y = Math.min(e.clientY + 14, innerHeight - tip.offsetHeight - 8); tip.style.left = x + 'px'; tip.style.top = y + 'px'; }
+  function hideTip() { tip.style.display = 'none'; }
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, a, kids) => { const e = document.createElementNS(NS, n); for (const k in a || {}) e.setAttribute(k, a[k]); (kids || []).forEach(c => e.appendChild(c)); return e; };
+  const txt = (x, y, s, cls, anchor) => { const t = el('text', { x, y, class: cls || 'tick', 'text-anchor': anchor || 'start' }); t.textContent = s; return t; };
+
+  function lineChart(host, series, keys, labels, colors) {
+    host.innerHTML = '';
+    const W = 1000, H = 220, L = 36, R = 10, T = 10, B = 26; const iw = W - L - R, ih = H - T - B;
+    const max = Math.max(1, ...keys.map(k => Math.max(...series.map(d => d[k]))));
+    const n = series.length; const xs = i => L + (n > 1 ? i / (n - 1) * iw : iw / 2); const ys = v => T + ih - v / max * ih;
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'per-day chart' });
+    const steps = 4; for (let s = 0; s <= steps; s++) { const v = max * s / steps, y = ys(v); svg.appendChild(el('line', { x1: L, x2: W - R, y1: y, y2: y, class: 'axis', 'stroke-dasharray': s ? '2 4' : '' })); svg.appendChild(txt(L - 6, y + 3, Math.round(v), 'tick', 'end')); }
+    const every = Math.max(1, Math.ceil(n / 10));
+    series.forEach((d, i) => { if (i % every === 0 || i === n - 1) svg.appendChild(txt(xs(i), H - 8, d.day.slice(5), 'tick', 'middle')); });
+    keys.forEach((k, si) => {
+      const pts = series.map((d, i) => xs(i) + ',' + ys(d[k])).join(' ');
+      svg.appendChild(el('polyline', { points: pts, fill: 'none', stroke: colors[si], 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+      if (n <= 60) series.forEach((d, i) => { if (d[k]) svg.appendChild(el('circle', { cx: xs(i), cy: ys(d[k]), r: 3, fill: colors[si], stroke: 'var(--surface)', 'stroke-width': 1.5 })); });
+    });
+    const cross = el('line', { x1: 0, x2: 0, y1: T, y2: T + ih, class: 'axis', style: 'display:none' }); svg.appendChild(cross);
+    const hit = el('rect', { x: L, y: T, width: iw, height: ih, fill: 'transparent' }); svg.appendChild(hit);
+    hit.addEventListener('mousemove', e => { const r = svg.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * W; const i = Math.max(0, Math.min(n - 1, Math.round((px - L) / iw * (n - 1)))); cross.setAttribute('x1', xs(i)); cross.setAttribute('x2', xs(i)); cross.style.display = ''; const d = series[i]; showTip(e, '<b>' + d.day + '</b><br>' + keys.map((k, si) => '<i class="sw" style="display:inline-block;width:8px;height:8px;background:' + colors[si] + ';margin-right:5px"></i>' + labels[si] + ': ' + fmt(d[k])).join('<br>')); });
+    hit.addEventListener('mouseleave', () => { cross.style.display = 'none'; hideTip(); });
+    host.appendChild(svg);
+    const lg = document.createElement('div'); lg.className = 'legend'; lg.innerHTML = keys.map((k, i) => '<span><i style="background:' + colors[i] + '"></i>' + labels[i] + '</span>').join(''); host.appendChild(lg);
+  }
+
+  function groupedBars(host, cats, groups) {
+    // cats: [{key,label}], groups: [{label, values:{cat:n}}]  -> one bar per group, per category (single colour, labelled)
+    host.innerHTML = '';
+    const W = 520, rowH = 22, L = 90, R = 40, T = 6; const H = T + groups.length * (cats.length * rowH + 10);
+    const max = Math.max(1, ...groups.flatMap(g => cats.map(c => g.values[c.key] || 0)));
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}` });
+    let y = T;
+    for (const g of groups) {
+      svg.appendChild(txt(0, y + 13, g.label, 'lbl'));
+      for (const c of cats) {
+        const v = g.values[c.key] || 0, w = Math.max(v ? 3 : 0, v / max * (W - L - R));
+        svg.appendChild(txt(L - 6, y + 13, c.label, 'tick', 'end'));
+        const r = el('rect', { x: L, y: y + 4, width: w, height: rowH - 8, rx: 3, fill: c.color || 'var(--s1)' }); svg.appendChild(r);
+        svg.appendChild(txt(L + w + 5, y + 13, fmt(v), 'tick'));
+        r.addEventListener('mousemove', e => showTip(e, g.label + ' · ' + c.label + ': <b>' + fmt(v) + '</b>')); r.addEventListener('mouseleave', hideTip);
+        y += rowH;
+      }
+      y += 10;
+    }
+    host.appendChild(svg);
+  }
+
+  function stackedBars(host, rowsIn, segs) {
+    // rowsIn: [{label, values:{seg:n}}], segs: [{key,label,color}]
+    host.innerHTML = '';
+    const W = 520, rowH = 26, L = 70, R = 44, T = 4; const H = T + rowsIn.length * rowH + 4;
+    const max = Math.max(1, ...rowsIn.map(r => segs.reduce((s, g) => s + (r.values[g.key] || 0), 0)));
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}` });
+    rowsIn.forEach((r, i) => {
+      const y = T + i * rowH; let x = L; const total = segs.reduce((s, g) => s + (r.values[g.key] || 0), 0);
+      svg.appendChild(txt(L - 6, y + 16, r.label, 'lbl', 'end'));
+      for (const g of segs) { const v = r.values[g.key] || 0; if (!v) continue; const w = v / max * (W - L - R); const rect = el('rect', { x, y: y + 5, width: Math.max(w - 2, 1), height: rowH - 10, rx: 2, fill: g.color }); svg.appendChild(rect); rect.addEventListener('mousemove', e => showTip(e, r.label + ' · ' + g.label + ': <b>' + fmt(v) + '</b>')); rect.addEventListener('mouseleave', hideTip); x += w; }
+      svg.appendChild(txt(x + 5, y + 16, fmt(total), 'tick'));
+    });
+    host.appendChild(svg);
+    const lg = document.createElement('div'); lg.className = 'legend'; lg.innerHTML = segs.map(g => '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>').join(''); host.appendChild(lg);
+  }
+
+  function hbars(host, items, labelKey, valueKey) {
+    host.innerHTML = ''; const max = Math.max(1, ...items.map(i => i[valueKey] || 0));
+    if (!items.length) { host.innerHTML = '<div class="tick" style="color:var(--muted);font-size:12px">nothing yet</div>'; return; }
+    for (const it of items) { const d = document.createElement('div'); d.className = 'hbar'; d.innerHTML = '<span>' + esc(it[labelKey] || 'unknown') + '</span><div><div class="bar" style="width:' + (100 * (it[valueKey] || 0) / max) + '%"></div></div><span class="n">' + fmt(it[valueKey]) + '</span>'; host.appendChild(d); }
+  }
+  function table(host, cols, items, render) {
+    if (!items.length) { host.innerHTML = '<div style="color:var(--muted);font-size:12px">nothing yet</div>'; return; }
+    host.innerHTML = '<table><thead><tr>' + cols.map(c => '<th class="' + (c.n ? 'n' : '') + '">' + esc(c.h) + '</th>').join('') + '</tr></thead><tbody>' + items.map(it => '<tr>' + render(it).map((v, i) => '<td class="' + (cols[i].n ? 'n' : '') + '">' + v + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
+  }
+
+  // ---------- render
+  function render(s) {
+    const r = s.range, a = s.all_time;
+    const tiles = [
+      ['Visitors', r.visitors, a.visitors], ['Sessions', r.sessions, a.sessions], ['Page views', r.page_views, a.page_views],
+      ['Brick connections', r.connects_real, a.connects_real, 'excluding the simulator'], ['Simulator runs', r.connects - r.connects_real, a.connects - a.connects_real],
+      ['Compiles', r.compiles, a.compiles, r.compile_fail ? fmt(r.compile_fail) + ' failed' : ''], ['Programs sent', r.programs, a.programs], ['Programs run', r.runs, a.runs],
+      ['Firmware installs', r.firmware, a.firmware], ['File operations', r.files, a.files], ['Time on site', hms(r.seconds), hms(a.seconds), r.ended_sessions ? 'avg ' + hms(r.seconds / r.ended_sessions) + ' per session' : ''],
+    ];
+    $('tiles').innerHTML = tiles.map(t => '<div class="tile"><div class="k">' + t[0] + '</div><div class="v">' + (typeof t[1] === 'number' ? fmt(t[1]) : t[1]) + '</div><div class="a">' + (t[3] ? esc(t[3]) + ' · ' : '') + 'all time ' + (typeof t[2] === 'number' ? fmt(t[2]) : t[2]) + '</div></div>').join('');
+    lineChart($('daily'), s.daily, ['visitors', 'connects', 'programs'], ['Visitors', 'Connections', 'Programs sent'], ['var(--s1)', 'var(--s3)', 'var(--s2)']);
+    groupedBars($('byApp'), [{ key: 'visitors', label: 'visitors' }, { key: 'connects', label: 'connects' }, { key: 'compiles', label: 'compiles' }, { key: 'programs', label: 'programs' }, { key: 'runs', label: 'runs' }],
+      APPS.filter(x => x !== 'home').map(x => ({ label: APP_NAMES[x], values: s.by_app[x] })));
+    const linkRows = APPS.filter(x => x !== 'home').map(x => ({ label: APP_NAMES[x], values: {} }));
+    for (const c of s.connect_links) { if (!c.ok) continue; const row = linkRows.find(x => x.label === APP_NAMES[c.app]); if (row) row.values[c.link] = (row.values[c.link] || 0) + c.n; }
+    stackedBars($('links'), linkRows, LINKS.map(([k, l]) => ({ key: k, label: l, color: LINK_COLOR[k] })));
+    hbars($('browsers'), s.browsers, 'browser', 'visitors'); hbars($('oses'), s.oses, 'os', 'visitors');
+    hbars($('modes'), s.editor_modes.map(m => ({ label: APP_NAMES[m.app] + ' · ' + m.mode, n: m.n })), 'label', 'n');
+    table($('examples'), [{ h: 'App' }, { h: 'Example' }, { h: 'Opened', n: true }], s.examples, e => [esc(APP_NAMES[e.app] || e.app), esc(e.name), fmt(e.n)]);
+    table($('controls'), [{ h: 'App' }, { h: 'Panel' }, { h: 'Uses', n: true }], s.controls, e => [esc(APP_NAMES[e.app] || e.app), esc(e.what), fmt(e.n)]);
+    table($('errors'), [{ h: 'App' }, { h: 'Event' }, { h: 'Detail' }, { h: 'Count', n: true }], s.errors, e => [esc(APP_NAMES[e.app] || e.app), esc(e.event), esc(e.detail), fmt(e.n)]);
+    table($('recent'), [{ h: 'When' }, { h: 'App' }, { h: 'Event' }, { h: 'Detail' }, { h: 'OK' }, { h: 'Duration', n: true }, { h: 'Browser' }, { h: 'OS' }], s.recent,
+      e => [new Date(e.ts * 1000).toLocaleString(), esc(APP_NAMES[e.app] || e.app), esc(e.event), esc(e.detail), e.ok ? 'yes' : '<span class="bad">no</span>', e.dur == null ? '' : hms(e.dur), esc(e.browser), esc(e.os)]);
+    $('meta').textContent = 'since ' + (s.first_day || 'today') + ' · ' + fmt(s.total_events) + ' events';
+    $('foot').textContent = 'Counters are anonymous: no IP addresses, no cookies, no program contents. Visitors are random ids kept in each browser; a cleared browser counts again. Do Not Track and Global Privacy Control are honoured. Database ' + (s.db_bytes / 1024).toFixed(0) + ' KB, generated ' + s.generated.replace('T', ' ') + '.';
+  }
+
+  async function load() {
+    try { render(await api('/summary?days=' + days)); $('gate').hidden = true; $('dash').hidden = false; try { localStorage.setItem('om.statskey', key); } catch (e) { /* ignore */ } }
+    catch (e) { $('dash').hidden = true; $('gate').hidden = false; $('err').textContent = e.message; }
+  }
+  $('btnGo').addEventListener('click', () => { key = $('key').value.trim(); load(); });
+  $('key').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnGo').click(); });
+  $('ranges').querySelectorAll('[data-days]').forEach(b => b.addEventListener('click', () => { days = Number(b.dataset.days); $('ranges').querySelectorAll('[data-days]').forEach(x => x.setAttribute('aria-pressed', x === b)); load(); }));
+  $('btnKey').addEventListener('click', () => { key = ''; try { localStorage.removeItem('om.statskey'); } catch (e) { /* ignore */ } $('dash').hidden = true; $('gate').hidden = false; $('key').value = ''; });
+  $('btnCsv').addEventListener('click', async () => {
+    try {
+      const ev = await api('/events?limit=5000'); const cols = ['ts', 'day', 'app', 'event', 'detail', 'ok', 'dur', 'browser', 'os', 'w'];
+      const csv = [cols.join(',')].concat(ev.map(e => cols.map(c => { const v = e[c] == null ? '' : String(e[c]); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','))).join('\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'openmindstorms-events.csv'; a.click();
+    } catch (e) { $('err').textContent = e.message; }
+  });
+  if (key) load(); else $('key').focus();
+})();
+</script>
+</body>
+</html>

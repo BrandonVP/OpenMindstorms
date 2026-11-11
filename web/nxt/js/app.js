@@ -1,6 +1,10 @@
 /* OpenNXT Workbench - UI wiring. */
 (function () {
   'use strict';
+  const hit = (e, d, ok, dur) => { try { if (window.OMStats) OMStats.hit(e, d, ok, dur); } catch (x) { /* counters never break the app */ } };
+  const STAT_EVENTS = [['Reading brick', null, ''], ['Sending program', 'program', 'rxe'], ['Uploading file', 'file', 'upload'], ['Delete', 'file', 'delete'], ['Run', 'run', 'uploaded']];
+  function stat(label, ok) { for (const [p, e, d] of STAT_EVENTS) if (label.startsWith(p)) { if (e) hit(e, d, ok); return; } hit('control', label.toLowerCase().slice(0, 32), ok); }
+  let compileFrom = 'text';
   const P = OpenNXT.protocol, T = OpenNXT.transports, S = OpenNXT.sim;
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -40,8 +44,8 @@
     if (!nxt) { toast('Connect to the brick first.', 'bad'); showView('connect'); return false; }
     if (nxt.busy) { toast('Busy, wait a moment.'); return false; }
     nxt.busy = true; setLink('busy', label || 'Working…');
-    try { await fn(); return true; }
-    catch (e) { logNote(label + ': ' + errorText(e), 'err'); toast(errorText(e), 'bad'); return false; }
+    try { await fn(); stat(label, true); return true; }
+    catch (e) { logNote(label + ': ' + errorText(e), 'err'); toast(errorText(e), 'bad'); stat(label, false); return false; }
     finally { nxt.busy = false; setLink('on', transport ? transport.name : ''); }
   }
 
@@ -60,6 +64,7 @@
       transport = null; setLink('off', 'Not connected');
       if (e && e.name === 'NotFoundError') { toast('No device chosen.'); return; }
       toast('Could not open the link: ' + errorText(e), 'bad', 9000);
+      hit('connect', kind, false);
       return;
     }
     nxt = new OpenNXT.NXT(transport, { log: logMsg });
@@ -69,7 +74,8 @@
     $('infoLink').textContent = transport.name + ' (' + (transport.label || '') + ')';
     logNote('connected over ' + transport.name);
     setLink('on', transport.name);
-    if (await run('Reading brick', refreshInfo)) toast('Connected to ' + $('infoName').textContent, 'good');
+    const ok = await run('Reading brick', refreshInfo); hit('connect', kind, ok);
+    if (ok) toast('Connected to ' + $('infoName').textContent, 'good');
   }
   async function refreshInfo() {
     const i = await nxt.deviceInfo();
@@ -131,7 +137,7 @@
   src.addEventListener('scroll', () => { gutter.scrollTop = src.scrollTop; });
   src.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); src.setRangeText('    ', src.selectionStart, src.selectionEnd, 'end'); src.dispatchEvent(new Event('input')); } });
   OpenNXT.examples.forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('exampleSel').appendChild(o); });
-  $('exampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = OpenNXT.examples[e.target.value]; src.value = ex.source; src.dispatchEvent(new Event('input')); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
+  $('exampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = OpenNXT.examples[e.target.value]; hit('example', ex.name); src.value = ex.source; src.dispatchEvent(new Event('input')); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
   $('btnOpenSrc').addEventListener('click', () => $('fileSrc').click());
   $('fileSrc').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; src.value = await f.text(); src.dispatchEvent(new Event('input')); setProgName(f.name.replace(/\.[^.]+$/, '')); e.target.value = ''; });
   function saveBlob(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: type || 'application/octet-stream' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
@@ -169,17 +175,20 @@
       if (r.status === 200) {
         const bytes = new Uint8Array(await r.arrayBuffer());
         setCompiled(bytes, 'compiled just now');
+        hit('compile', compileFrom, true);
         setOut([['ok', 'Compiled: ' + bytes.length + ' bytes']]); renderGutter();
         return true;
       }
       const text = await r.text();
       const lines = text.split('\n').map(l => ['e', l]);
       for (const l of text.split('\n')) { const m = /line (\d+)/.exec(l); if (m) { errLine = Number(m[1]); break; } }
+      hit('compile', compileFrom, false);
       lines.push(['e', r.status === 422 ? ('Compilation failed' + (errLine ? ' - first error on line ' + errLine : '') + '.') : ('Compile server answered HTTP ' + r.status)]);
       setOut(lines); renderGutter();
       if (errLine) { const pre = src.value.split('\n').slice(0, errLine - 1).join('\n').length + (errLine > 1 ? 1 : 0); const len = (src.value.split('\n')[errLine - 1] || '').length; src.focus(); src.setSelectionRange(pre, pre + len); }
       return false;
     } catch (e) {
+      hit('compile', 'server-unreachable', false);
       setOut([['e', 'Could not reach the compile server at ' + url + ' (' + e.message + ').'], ['', 'The NXC compiler runs on the OpenMindstorms server (TrueNAS). From a local copy of this page, enter https://openrcx.vp/api/nxc above, or compile with BricxCC and use "Open compiled .rxe".']]);
       return false;
     } finally { $('btnCompile').disabled = false; }
@@ -194,7 +203,7 @@
     const name = progName();
     if (!/^[^\\/:*?"<>|]{1,15}\.rxe$/i.test(name)) { toast('Name on brick must be up to 15 characters plus .rxe', 'bad'); return false; }
     $('progUpload').style.width = '0%';
-    return run('Uploading ' + name, async () => {
+    return run('Sending program ' + name, async () => {
       await nxt.upload(name, compiled, progressUI('progUpload', 'progUploadText', name));
       toast('Uploaded as ' + name + ' (' + compiled.length + ' bytes). Press Run here, or on the brick: My Files > Software files > ' + name.replace(/\.rxe$/i, ''), 'good', 8000);
       try { files = await nxt.listFiles(); renderFiles(); } catch (e) { /* list later */ }
@@ -229,15 +238,15 @@
     store.set('mode', mode);
     if (mode === 'blocks') { ensureBlockly(); setTimeout(() => bws && Blockly.svgResize(bws), 0); }
   }
-  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setEditorMode(b.dataset.mode)));
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setEditorMode(b.dataset.mode); hit('editor_mode', b.dataset.mode); }));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
-  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = Bk.examples[e.target.value]; loadBlocks(ex.json); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = Bk.examples[e.target.value]; hit('example', ex.name); loadBlocks(ex.json); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
   $('btnBlocksNew').addEventListener('click', () => loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'nxt_program', x: 40, y: 40 }] } }));
   $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
   $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
   $('btnSaveBlocks').addEventListener('click', () => bws && saveBlob('program.nxtblocks.json', JSON.stringify(Blockly.serialization.workspaces.save(bws), null, 1), 'application/json'));
   $('btnBlocksToText').addEventListener('click', () => { src.value = blocksCode(); src.dispatchEvent(new Event('input')); setEditorMode('text'); toast('Generated NXC copied to the text editor'); });
-  async function compileBlocks() { refreshGenerated(); $('genDetails').open = true; const saved = src.value; src.value = blocksCode(); const ok = await compile(); src.value = saved; renderGutter(); return ok; }
+  async function compileBlocks() { refreshGenerated(); $('genDetails').open = true; const saved = src.value; src.value = blocksCode(); compileFrom = 'blocks'; const ok = await compile(); compileFrom = 'text'; src.value = saved; renderGutter(); return ok; }
   $('btnCompileBlocks').addEventListener('click', compileBlocks);
   $('btnUploadBlocks').addEventListener('click', async () => { if (await compileBlocks()) await uploadProgram(); });
   $('btnRunBlocks').addEventListener('click', () => run('Run', async () => { await nxt.startProgram(progName()); $('infoProg').textContent = progName(); toast('Running ' + progName(), 'good'); }));
@@ -337,7 +346,7 @@
     if (f.name.length > 19) { toast('File names on the brick are at most 15 characters plus extension', 'bad'); return; }
     const data = new Uint8Array(await f.arrayBuffer());
     $('progFile').style.width = '0%';
-    await run('Uploading ' + f.name, async () => { await nxt.upload(f.name, data, progressUI('progFile', 'progFileText', f.name)); files = await nxt.listFiles(); renderFiles(); toast('Uploaded ' + f.name, 'good'); });
+    await run('Uploading file ' + f.name, async () => { await nxt.upload(f.name, data, progressUI('progFile', 'progFileText', f.name)); files = await nxt.listFiles(); renderFiles(); toast('Uploaded ' + f.name, 'good'); });
   });
   $('wipeConfirm').addEventListener('change', e => { $('btnWipe').disabled = !e.target.checked; });
   $('btnWipe').addEventListener('click', () => run('Deleting all files', async () => { await nxt.deleteUserFlash(); $('wipeConfirm').checked = false; $('btnWipe').disabled = true; files = await nxt.listFiles(); renderFiles(); toast('User flash erased', 'good'); }));

@@ -1,6 +1,9 @@
 /* OpenRCX Workbench - UI wiring. */
 (function () {
   'use strict';
+  const hit = (e, d, ok, dur) => { try { if (window.OMStats) OMStats.hit(e, d, ok, dur); } catch (x) { /* counters never break the app */ } };
+  const STAT_EVENTS = [['Reading brick', null, ''], ['Downloading program', 'program', 'slot'], ['Run', 'run', 'slot'], ['Installing firmware', 'firmware', 'rcx'], ['Datalog', 'file', 'datalog']];
+  function stat(label, ok) { for (const [p, e, d] of STAT_EVENTS) if (label.startsWith(p)) { if (e) hit(e, d, ok); return; } hit('control', label.toLowerCase().slice(0, 32), ok); }
   const P = OpenRCX.protocol, T = OpenRCX.transports, L = OpenRCX.link, S = OpenRCX.sim;
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -79,8 +82,8 @@
     if (!rcx) { toast('Connect to the brick first.', 'bad'); showView('connect'); return false; }
     if (link.busy) { toast('The link is busy, wait a moment.'); return false; }
     setLink('busy', label || 'Working…');
-    try { await fn(); setLink('on', transport.name); return true; }
-    catch (e) { logNote(label + ': ' + errorText(e), 'err'); toast(errorText(e), 'bad'); setLink('on', transport.name); return false; }
+    try { await fn(); setLink('on', transport.name); stat(label, true); return true; }
+    catch (e) { logNote(label + ': ' + errorText(e), 'err'); toast(errorText(e), 'bad'); setLink('on', transport.name); stat(label, false); return false; }
   }
 
   /* ------------------------------------------------------------- connect */
@@ -102,6 +105,7 @@
       transport = null; setLink('off', 'Not connected');
       if (e && e.name === 'NotFoundError') { toast('No port chosen.'); return; }
       toast('Could not open the tower: ' + errorText(e), 'bad');
+      hit('connect', kind, false);
       return;
     }
     link = new L.RcxLink(transport, { log: logPacket });
@@ -113,6 +117,7 @@
     logNote('connected: ' + transport.name);
     setLink('on', transport.name);
     const ok = await run('Reading brick', refreshInfo);
+    hit('connect', kind, ok);
     if (ok) toast('Connected to ' + transport.name, 'good');
   }
 
@@ -191,6 +196,7 @@
   $('exampleSel').addEventListener('change', e => {
     if (e.target.value === '') return;
     src.value = OpenRCX.examples[e.target.value].source;
+    hit('example', OpenRCX.examples[e.target.value].name);
     src.dispatchEvent(new Event('input'));
     e.target.value = '';
   });
@@ -281,10 +287,12 @@
         setCompiled(img, bytes, fromBlocks ? 'compiled from blocks' : 'compiled just now');
         lines.push(['ok', 'Compiled: ' + P.describeImage(img)]);
         setOut(lines); renderGutter();
+        hit('compile', fromBlocks ? 'blocks' : 'text', true);
         if (fromBlocks) toast('Blocks compiled: ' + img.size + ' bytes', 'good');
         return true;
       }
       for (const t of errs) { const m = /line (\d+)/.exec(t); if (m) { errLine = Number(m[1]); break; } }
+      hit('compile', fromBlocks ? 'blocks' : 'text', false);
       lines.push(['e', 'Compilation failed' + (errLine ? ' - first error on line ' + errLine : '') + '.']);
       setOut(lines); renderGutter();
       if (fromBlocks) { errLine = null; toast('The generated NQC did not compile; see Compiler output below the blocks.', 'bad'); return false; }
@@ -379,9 +387,9 @@
     store.set('mode', mode);
     if (mode === 'blocks') { ensureBlockly(); setTimeout(() => bws && Blockly.svgResize(bws), 0); }
   }
-  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setEditorMode(b.dataset.mode)));
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setEditorMode(b.dataset.mode); hit('editor_mode', b.dataset.mode); }));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
-  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; loadBlocks(Bk.examples[e.target.value].json); e.target.value = ''; });
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; loadBlocks(Bk.examples[e.target.value].json); hit('example', Bk.examples[e.target.value].name); e.target.value = ''; });
   $('btnBlocksNew').addEventListener('click', () => loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'rcx_program', x: 40, y: 40 }] } }));
   $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
   $('fileBlocks').addEventListener('change', async e => {
