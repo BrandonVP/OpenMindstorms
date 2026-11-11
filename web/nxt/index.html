@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenNXT Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../shared/workbench.css">
+<style>
+/* OpenNXT accent: the NXT's orange button */
+:root { --accent: #f28c28; --accent-ink: #2b1600; --accent-soft: #ffe2c4; --lcd: #d9dfd0; --lcd-ink: #1f2a1a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent: #f28c28; --accent-soft: #4a2a08; --lcd: #2a3324; --lcd-ink: #cfe3b8; } }
+:root[data-theme="dark"] { --accent: #f28c28; --accent-soft: #4a2a08; --lcd: #2a3324; --lcd-ink: #cfe3b8; }
+.brand .brick { background: #e9e9e9; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+.brand .brick::after { background: var(--lcd); }
+.motor .tacho { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.drive { display: grid; gap: 10px; }
+.drive input[type=range] { width: 100%; accent-color: var(--accent); }
+.filelist td.act { white-space: nowrap; text-align: right; }
+.filelist td.act .btn { margin-left: 4px; }
+</style>
+</head>
+<body class="disconnected">
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><a class="home" href="../" title="OpenMindstorms home">&#8962;</a><span class="brick" aria-hidden="true"></span> OpenNXT Workbench</div>
+    <div class="vitals">
+      <span class="pill" id="pillLink"><span class="dot"></span><span id="linkText">Not connected</span></span>
+      <span class="pill" id="pillName" hidden><span id="nameText" class="mono">-</span> · FW <span id="fwText" class="mono">-</span></span>
+      <span class="pill" id="pillBatt" hidden>🔋 <span id="battText" class="mono">-</span></span>
+      <button class="btn sm" id="btnRefresh" hidden>Refresh</button>
+      <button class="btn sm" id="btnDisconnect" hidden>Disconnect</button>
+    </div>
+  </div>
+
+  <div class="shell">
+    <nav class="rail" aria-label="Sections">
+      <button data-view="connect" class="active">Connect <span class="k">1</span></button>
+      <button data-view="program">Program <span class="k">2</span></button>
+      <button data-view="control">Control <span class="k">3</span></button>
+      <button data-view="files">Files <span class="k">4</span></button>
+      <button data-view="console">Console <span class="k">5</span></button>
+      <div class="spacer"></div>
+      <div class="foot">LEGO Mindstorms NXT · USB &amp; Bluetooth<br>Compiler: NXC (NBC 1.2.1) on the server</div>
+    </nav>
+
+    <main class="main">
+      <!-- ============================================================ CONNECT -->
+      <section class="view active" id="view-connect">
+        <header><h2>Connect to the brick</h2><p>Switch the NXT on, pick USB or Bluetooth, connect. Chrome or Edge is required.</p></header>
+        <div id="noApi" class="banner bad" hidden></div>
+        <div class="grid two">
+          <div class="panel">
+            <h3>Link</h3>
+            <div class="stack" id="linkChoices">
+              <label class="choice"><input type="radio" name="link" value="usb" checked><span><b>USB cable</b><small>Needs the WinUSB driver on Windows (Zadig, see driver help). Fastest link.</small></span></label>
+              <label class="choice"><input type="radio" name="link" value="bt"><span><b>Bluetooth</b><small>Pair the brick in Windows first (PIN 1234), then pick its <i>outgoing</i> COM port.</small></span></label>
+              <label class="choice"><input type="radio" name="link" value="sim"><span><b>Simulator</b><small>A software NXT inside this page.</small></span></label>
+            </div>
+            <div class="row" style="margin-top:12px"><button class="btn primary" id="btnConnect">Connect</button></div>
+            <details class="help">
+              <summary>Driver help (Windows)</summary>
+              <p><b>USB:</b> LEGO's driver is 32-bit only and conflicts with the browser. Install the generic WinUSB driver with <a href="https://zadig.akeo.ie/" target="_blank" rel="noopener">Zadig</a>: Options → List All Devices → "LEGO MINDSTORMS NXT" (0694 0002) → target WinUSB → Install/Replace Driver. To get NXT-G or BricxCC talking again later, uninstall the device in Device Manager and replug.</p>
+              <p><b>Bluetooth:</b> on the brick: Bluetooth → On → Visible. In Windows: Settings → Bluetooth → Add device → NXT → PIN <code>1234</code>. Windows then lists two COM ports for it under <i>Bluetooth</i> in Device Manager; use the one marked <i>outgoing</i>. No driver needed, but replies are slower than USB.</p>
+              <p>Full instructions: <a href="https://github.com/BrandonVP/OpenRCX#drivers" target="_blank" rel="noopener">README, Drivers</a>.</p>
+            </details>
+          </div>
+          <div class="panel">
+            <h3>Brick</h3>
+            <dl class="kv">
+              <dt>Link</dt><dd id="infoLink">-</dd>
+              <dt>Name</dt><dd id="infoName">-</dd>
+              <dt>Firmware</dt><dd id="infoFw">-</dd>
+              <dt>Battery</dt><dd id="infoBatt">-</dd>
+              <dt>Free flash</dt><dd id="infoFlash">-</dd>
+              <dt>Running</dt><dd id="infoProg">-</dd>
+              <dt>Bluetooth</dt><dd id="infoBt">-</dd>
+              <dt>Messages</dt><dd id="infoStats">-</dd>
+            </dl>
+            <div class="row needs-link" style="margin-top:12px">
+              <button class="btn" id="btnBeep">Beep</button>
+              <button class="btn" id="btnSelfTest">Self test</button>
+              <label class="f"><span>Rename</span><input type="text" id="newName" maxlength="15" placeholder="NXT"></label>
+              <button class="btn sm" id="btnRename" style="align-self:flex-end">Set name</button>
+            </div>
+            <p class="hint">Self test: beep, read every sensor port, nudge motor A ten degrees each way, list files.</p>
+          </div>
+          <div class="panel sim-only">
+            <h3>Simulated inputs</h3>
+            <div class="stack">
+              <label class="f"><span>Port 1 <span id="simS1v" class="mono">0</span></span><input type="range" min="0" max="100" value="0" id="simS1"></label>
+              <label class="f"><span>Port 2 <span id="simS2v" class="mono">0</span></span><input type="range" min="0" max="100" value="0" id="simS2"></label>
+              <label class="f"><span>Port 3 <span id="simS3v" class="mono">0</span></span><input type="range" min="0" max="100" value="0" id="simS3"></label>
+              <label class="f"><span>Port 4 ultrasonic cm <span id="simS4v" class="mono">40</span></span><input type="range" min="0" max="255" value="40" id="simS4"></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ PROGRAM -->
+      <section class="view" id="view-program">
+        <header><h2>Program</h2><p>Write NXC, compile on the server, upload to the brick, run.</p></header>
+        <div class="row" style="margin-bottom:10px">
+          <label class="f"><span>Examples</span><select id="exampleSel"><option value="">Choose…</option></select></label>
+          <button class="btn" id="btnOpenSrc">Open .nxc</button>
+          <button class="btn" id="btnSaveSrc">Save .nxc</button>
+          <input type="file" id="fileSrc" accept=".nxc,.c,.h,.txt" hidden>
+          <span style="flex:1"></span>
+          <label class="f"><span>Name on brick</span><input type="text" id="progName" value="OpenNXT.rxe" maxlength="19" class="mono" style="width:13em"></label>
+          <button class="btn primary" id="btnCompile">Compile</button>
+          <button class="btn needs-link" id="btnUpload" disabled>Upload</button>
+          <button class="btn run needs-link" id="btnRun">Run</button>
+          <button class="btn stop needs-link" id="btnStopProg">Stop</button>
+        </div>
+        <div class="workspace">
+          <div class="editor"><div class="gutter" id="gutter">1</div><textarea id="src" spellcheck="false" aria-label="NXC source"></textarea></div>
+          <aside class="api" aria-label="NXC API reference">
+            <div class="api-head">
+              <input type="search" id="apiSearch" placeholder="Search the NXC API… (click to insert)" aria-label="Search API">
+              <a class="small" href="https://bricxcc.sourceforge.net/nbc/nxcdoc/NXC_Guide.pdf" target="_blank" rel="noopener">Full NXC guide (PDF)</a>
+            </div>
+            <div class="api-list" id="apiList"></div>
+          </aside>
+        </div>
+        <div class="row" style="margin:10px 0 6px">
+          <h3 style="margin:0">Compiler output</h3>
+          <span class="small muted" id="imgSummary"></span>
+          <span style="flex:1"></span>
+          <label class="f"><span>Compile server</span><input type="text" id="compileUrl" class="mono" style="width:22em"></label>
+          <button class="btn sm" id="btnOpenRxe">Open compiled .rxe…</button>
+          <input type="file" id="fileRxe" accept=".rxe" hidden>
+          <button class="btn sm" id="btnSaveRxe" disabled>Save .rxe</button>
+        </div>
+        <pre class="out" id="compileOut">Press Compile.</pre>
+        <div class="row" style="margin-top:8px"><div class="progress" style="flex:1"><div id="progUpload"></div></div><span class="progress-text" id="progUploadText"></span></div>
+      </section>
+
+      <!-- ============================================================ CONTROL -->
+      <section class="view" id="view-control">
+        <header><h2>Control</h2><p>Drive the brick directly. Works while a program runs too.</p></header>
+        <div class="grid three needs-link">
+          <div class="panel motor" data-motor="A"><div class="row"><span class="name">A</span><span class="tacho" data-tacho>— °</span></div>
+            <div class="row tight"><button class="btn icon" data-m="rev" title="Backward">◀</button><button class="btn icon" data-m="fwd" title="Forward">▶</button><span style="flex:1"></span><button class="btn sm stop" data-m="brake">Brake</button><button class="btn sm" data-m="coast">Coast</button></div>
+            <label class="f"><span>Power <span data-pv class="mono">75</span></span><input type="range" min="0" max="100" value="75" data-power></label>
+            <div class="row tight"><label class="f"><span>Turn</span><input type="number" data-deg value="360" step="15" style="width:6em"></label><button class="btn sm" data-m="deg" style="align-self:flex-end">° go</button><button class="btn sm" data-m="reset" style="align-self:flex-end">Reset °</button></div></div>
+          <div class="panel motor" data-motor="B"><div class="row"><span class="name">B</span><span class="tacho" data-tacho>— °</span></div>
+            <div class="row tight"><button class="btn icon" data-m="rev" title="Backward">◀</button><button class="btn icon" data-m="fwd" title="Forward">▶</button><span style="flex:1"></span><button class="btn sm stop" data-m="brake">Brake</button><button class="btn sm" data-m="coast">Coast</button></div>
+            <label class="f"><span>Power <span data-pv class="mono">75</span></span><input type="range" min="0" max="100" value="75" data-power></label>
+            <div class="row tight"><label class="f"><span>Turn</span><input type="number" data-deg value="360" step="15" style="width:6em"></label><button class="btn sm" data-m="deg" style="align-self:flex-end">° go</button><button class="btn sm" data-m="reset" style="align-self:flex-end">Reset °</button></div></div>
+          <div class="panel motor" data-motor="C"><div class="row"><span class="name">C</span><span class="tacho" data-tacho>— °</span></div>
+            <div class="row tight"><button class="btn icon" data-m="rev" title="Backward">◀</button><button class="btn icon" data-m="fwd" title="Forward">▶</button><span style="flex:1"></span><button class="btn sm stop" data-m="brake">Brake</button><button class="btn sm" data-m="coast">Coast</button></div>
+            <label class="f"><span>Power <span data-pv class="mono">75</span></span><input type="range" min="0" max="100" value="75" data-power></label>
+            <div class="row tight"><label class="f"><span>Turn</span><input type="number" data-deg value="360" step="15" style="width:6em"></label><button class="btn sm" data-m="deg" style="align-self:flex-end">° go</button><button class="btn sm" data-m="reset" style="align-self:flex-end">Reset °</button></div></div>
+        </div>
+        <div class="grid two needs-link" style="margin-top:14px">
+          <div class="panel drive"><h3>Drive (B + C in sync)</h3>
+            <label class="f"><span>Steering <span id="steerV" class="mono">0</span> (−100 left … 100 right)</span><input type="range" min="-100" max="100" value="0" id="steer"></label>
+            <label class="f"><span>Power <span id="drivePv" class="mono">75</span></span><input type="range" min="0" max="100" value="75" id="drivePower"></label>
+            <div class="row"><button class="btn run" id="btnDriveFwd">▲ Forward</button><button class="btn run" id="btnDriveRev">▼ Backward</button><button class="btn stop" id="btnDriveStop">Stop</button><button class="btn stop" id="btnAllOff">All motors off</button></div></div>
+          <div class="panel"><h3>Sound &amp; messages</h3>
+            <div class="row"><label class="f"><span>Tone Hz</span><input type="number" id="toneHz" value="440" min="200" max="14000"></label><label class="f"><span>ms</span><input type="number" id="toneMs" value="300" min="10" max="10000" step="10"></label><button class="btn" id="btnTone" style="align-self:flex-end">Play tone</button><button class="btn sm" id="btnStopSound" style="align-self:flex-end">Stop sound</button></div>
+            <div class="row" style="margin-top:10px"><label class="f"><span>Sound file</span><select id="soundSel"><option value="">(list files first)</option></select></label><button class="btn sm" id="btnPlayFile" style="align-self:flex-end">Play</button></div>
+            <div class="row" style="margin-top:10px"><label class="f"><span>Mailbox</span><select id="msgBox"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label><label class="f" style="flex:1"><span>Message</span><input type="text" id="msgText" value="hello"></label><button class="btn sm" id="btnMsgSend" style="align-self:flex-end">Send</button><button class="btn sm" id="btnMsgRead" style="align-self:flex-end">Read</button></div>
+            <p class="hint mono" id="msgOut"></p></div>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top:14px" id="sensorGrid">
+          <div class="panel sensor" data-sensor="1"><div class="row"><h3 style="margin:0">Port 1</h3><span style="flex:1"></span><div class="lcd" data-lcd><small>VALUE</small>—</div></div><div class="row"><select data-type><option value="none">none</option><option value="touch">touch</option><option value="light">light (lamp on)</option><option value="light_passive">light (ambient)</option><option value="sound">sound dB</option><option value="sound_dba">sound dBA</option><option value="ultrasonic">ultrasonic</option><option value="color">colour</option><option value="color_red">colour: red lamp</option><option value="color_green">colour: green lamp</option><option value="color_blue">colour: blue lamp</option><option value="color_none">colour: no lamp</option><option value="temperature">temperature</option><option value="angle">rotation (old)</option></select><button class="btn sm" data-apply>Apply</button></div></div>
+          <div class="panel sensor" data-sensor="2"><div class="row"><h3 style="margin:0">Port 2</h3><span style="flex:1"></span><div class="lcd" data-lcd><small>VALUE</small>—</div></div><div class="row"><select data-type><option value="none">none</option><option value="touch">touch</option><option value="light">light (lamp on)</option><option value="light_passive">light (ambient)</option><option value="sound">sound dB</option><option value="sound_dba">sound dBA</option><option value="ultrasonic">ultrasonic</option><option value="color">colour</option><option value="color_red">colour: red lamp</option><option value="color_green">colour: green lamp</option><option value="color_blue">colour: blue lamp</option><option value="color_none">colour: no lamp</option><option value="temperature">temperature</option><option value="angle">rotation (old)</option></select><button class="btn sm" data-apply>Apply</button></div></div>
+          <div class="panel sensor" data-sensor="3"><div class="row"><h3 style="margin:0">Port 3</h3><span style="flex:1"></span><div class="lcd" data-lcd><small>VALUE</small>—</div></div><div class="row"><select data-type><option value="none">none</option><option value="touch">touch</option><option value="light">light (lamp on)</option><option value="light_passive">light (ambient)</option><option value="sound">sound dB</option><option value="sound_dba">sound dBA</option><option value="ultrasonic">ultrasonic</option><option value="color">colour</option><option value="color_red">colour: red lamp</option><option value="color_green">colour: green lamp</option><option value="color_blue">colour: blue lamp</option><option value="color_none">colour: no lamp</option><option value="temperature">temperature</option><option value="angle">rotation (old)</option></select><button class="btn sm" data-apply>Apply</button></div></div>
+          <div class="panel sensor" data-sensor="4"><div class="row"><h3 style="margin:0">Port 4</h3><span style="flex:1"></span><div class="lcd" data-lcd><small>VALUE</small>—</div></div><div class="row"><select data-type><option value="none">none</option><option value="touch">touch</option><option value="light">light (lamp on)</option><option value="light_passive">light (ambient)</option><option value="sound">sound dB</option><option value="sound_dba">sound dBA</option><option value="ultrasonic" selected>ultrasonic</option><option value="color">colour</option><option value="color_red">colour: red lamp</option><option value="color_green">colour: green lamp</option><option value="color_blue">colour: blue lamp</option><option value="color_none">colour: no lamp</option><option value="temperature">temperature</option><option value="angle">rotation (old)</option></select><button class="btn sm" data-apply>Apply</button></div></div>
+        </div>
+        <div class="row needs-link" style="margin:10px 0 14px"><label class="row"><input type="checkbox" id="pollSensors"> Live readout (sensors and motor degrees)</label><label class="f"><span>every</span><select id="pollInterval"><option value="200">200 ms</option><option value="500" selected>500 ms</option><option value="1000">1 s</option></select></label><button class="btn sm" id="btnReadOnce">Read once</button></div>
+      </section>
+
+      <!-- ============================================================ FILES -->
+      <section class="view" id="view-files">
+        <header><h2>Files on the brick</h2><p>Programs (.rxe), sounds (.rso), pictures (.ric) and data logs live in the brick's flash.</p></header>
+        <div class="row needs-link" style="margin-bottom:10px"><button class="btn primary" id="btnFilesRefresh">List files</button><button class="btn" id="btnUploadFile">Upload file…</button><input type="file" id="fileAny" hidden><span class="small muted" id="filesInfo"></span><span style="flex:1"></span><label class="row small"><input type="checkbox" id="wipeConfirm"> I really mean it</label><button class="btn danger" id="btnWipe" disabled>Delete all files</button></div>
+        <div class="panel tablewrap filelist"><table id="fileTable"><thead><tr><th>Name</th><th>Size</th><th>Kind</th><th></th></tr></thead><tbody><tr><td colspan="4" class="muted">Connect and press List files.</td></tr></tbody></table></div>
+        <div class="row" style="margin-top:8px"><div class="progress" style="flex:1"><div id="progFile"></div></div><span class="progress-text" id="progFileText"></span></div>
+      </section>
+
+      <!-- ============================================================ CONSOLE -->
+      <section class="view" id="view-console">
+        <header><h2>Console</h2><p>Every message on the link, and a raw command sender.</p></header>
+        <div class="row needs-link" style="margin-bottom:10px"><label class="f" style="flex:1"><span>Raw message (hex: type, command, payload…)</span><input type="text" id="rawHex" class="mono" value="00 0b" placeholder="00 0b"></label><button class="btn primary" id="btnRaw" style="align-self:flex-end">Send</button></div>
+        <div class="row" style="margin-bottom:6px"><span class="small muted" id="conStats">0 messages</span><span style="flex:1"></span><label class="row small"><input type="checkbox" id="conAuto" checked> autoscroll</label><button class="btn sm" id="btnConCopy">Copy</button><button class="btn sm" id="btnConClear">Clear</button></div>
+        <div class="console" id="con"></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script src="js/protocol.js"></script>
+<script src="js/transports.js"></script>
+<script src="js/nxt.js"></script>
+<script src="js/sim.js"></script>
+<script src="data/nxc_api.js"></script>
+<script src="data/examples.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

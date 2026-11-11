@@ -30,6 +30,20 @@ services:
       - /mnt/apps/configs/openrcx/certs:/certs
     environment:
       SERVER_IP: 192.168.68.208            # these go into the certificate; changing them
-      SERVER_NAMES: openrcx.vp,openrcx,truenas   # regenerates it on the next start
+      SERVER_NAMES: openrcx.vp,openrcx,truenas,www.openmindstorms.com,openmindstorms.com   # regenerates it on the next start
+      TZ: America/Chicago
+    depends_on:
+      - nxc
+    restart: unless-stopped
+
+  # NXC compile service for OpenNXT (the NXC compiler is a native program, so the
+  # Workbench sends source here).  Reached through nginx at /api/nxc; not published.
+  nxc:
+    build:
+      context: /mnt/apps/configs/openrcx/src/truenas/nxc-service
+      dockerfile: Dockerfile
+    image: openrcx-nxc:local
+    pull_policy: build
+    environment:
       TZ: America/Chicago
     restart: unless-stopped

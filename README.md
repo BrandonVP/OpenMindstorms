@@ -3,13 +3,14 @@
 Program and control the original yellow LEGO Mindstorms **RCX** from a modern 64-bit
 PC, no Windows XP virtual machine required.
 
-Three pieces:
+This repository is the home of **OpenMindstorms**: one site, one app per brick.
 
 | Piece | What it is |
 | --- | --- |
-| [`web/`](web/) | **OpenRCX Workbench**: a point-and-click front end that runs in Chrome or Edge straight from `web/rcx/index.html`. Program with snap-together **blocks** (RCX Code style) or NQC text, compile in the browser, download, run, drive motors, watch sensors, load firmware, read the datalog. No install, no Python |
+| [`web/`](web/) | The site. `web/index.html` is the OpenMindstorms home page; [`web/rcx/`](web/rcx/) is the **OpenRCX Workbench** (blocks or NQC text, in-browser compiler, firmware, datalog); [`web/nxt/`](web/nxt/) is the **OpenNXT Workbench** (USB or Bluetooth from the browser, NXC with a server-side compiler, motors, sensors, files). Both run in Chrome or Edge straight from the files, no install |
 | [`tower/`](tower/) | Firmware that turns a **Teensy 4.x or ESP32** plus an IR LED and a 38 kHz receiver into an RCX infrared tower that appears as a normal USB serial port |
-| [`python/`](python/) | `openrcx` library and the `rcx` command for scripting and automation: firmware install, program download, motors, sensors, sounds, datalog, raw opcodes. Compiles NQC sources with the bundled `nqc.exe` |
+| [`python/`](python/) | `openrcx` / `rcx` and `opennxt` / `nxt`: libraries and command-line tools for scripting both bricks |
+| [`truenas/`](truenas/) | The TrueNAS app: nginx for the site plus the `nxc` compile container |
 
 **Fastest start:** open [web/rcx/index.html](web/rcx/index.html) in Edge or Chrome, pick your
 tower, press Connect. Choose *Simulator* to try it with no hardware at all.

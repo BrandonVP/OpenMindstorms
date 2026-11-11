@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "openmindstorms"
 version = "0.2.0"
 description = "Program and control the LEGO Mindstorms RCX (IR tower) and NXT (USB/Bluetooth) from a modern PC"
-readme = "../README.md"
+readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 dependencies = ["pyserial>=3.5"]
