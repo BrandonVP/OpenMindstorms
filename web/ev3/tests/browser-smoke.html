@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>OpenEV3 browser smoke test</title></head>
+<body>
+<pre id="out">running…</pre>
+<script src="../js/protocol.js"></script>
+<script src="../js/vm.js"></script>
+<script src="../js/ev3.js"></script>
+<script src="../js/transports.js"></script>
+<script src="../js/sim.js"></script>
+<script>
+(async () => {
+  const out = []; const say = t => { out.push(t); document.getElementById('out').textContent = out.join('\n'); };
+  try {
+    const t = new OpenEV3.sim.SimTransport({ sleeper: () => Promise.resolve() });
+    const ev3 = new OpenEV3.EV3(t);
+    const i = await ev3.info(); say('name ' + i.name + ' fw ' + i.firmware + ' batt ' + (await ev3.battery()).volts.toFixed(2) + ' V');
+    await ev3.displayText(['Hello', 'EV3']); await ev3.led(9); await ev3.playTone(440, 50, 50);
+    say('display ' + JSON.stringify(t.ev3.state.display.slice(0, 2)) + ' led ' + t.ev3.state.led + ' sounds ' + t.ev3.state.sounds.length);
+    const data = new Uint8Array(1000); for (let k = 0; k < 1000; k++) data[k] = k & 0xFF;
+    await ev3.mkdir('OpenEV3'); await ev3.upload('OpenEV3/smoke.rbf', data); say('uploaded; files: ' + (await ev3.listFiles('OpenEV3')).map(f => f.name).join(', '));
+    const back = await ev3.download('OpenEV3/smoke.rbf'); say('download ' + back.length + ' bytes ' + (back.every((v, k) => v === (k & 0xFF)) ? 'match' : 'MISMATCH'));
+    await ev3.drive('BC', 50, 0, 360); say('motor B pos ' + await ev3.motorPosition('B'));
+    t.ev3.state.inputs[3] = { type: 30, mode: 0, values: [42] }; say('ultrasonic ' + await ev3.sensorValue(4, 0) + ' cm');
+    say('SMOKE OK');
+  } catch (e) { say('SMOKE FAIL ' + (e.stack || e)); }
+})();
+</script>
+</body></html>

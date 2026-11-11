@@ -1,6 +1,6 @@
 # Plan: adding the LEGO Mindstorms EV3 to OpenMindstorms
 
-Status: proposal, 2026-11-10. Nothing is built yet. No EV3 was connected to the PC when
+Status: phases 1-3 built, 2026-11-11 (Python library verified on the brick; Workbench + block compiler verified against the simulator). Originally a proposal from 2026-11-10 when nothing was built yet. No EV3 was connected to the PC when
 this was written, so the hardware facts below come from LEGO's developer kits and from
 community projects, not from a brick on the bench.
 

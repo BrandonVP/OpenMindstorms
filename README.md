@@ -7,9 +7,9 @@ This repository is the home of **OpenMindstorms**: one site, one app per brick.
 
 | Piece | What it is |
 | --- | --- |
-| [`web/`](web/) | The site. `web/index.html` is the OpenMindstorms home page; [`web/rcx/`](web/rcx/) is the **OpenRCX Workbench** (blocks or NQC text, in-browser compiler, firmware, datalog); [`web/nxt/`](web/nxt/) is the **OpenNXT Workbench** (USB or Bluetooth from the browser, NXC with a server-side compiler, motors, sensors, files). Both run in Chrome or Edge straight from the files, no install |
+| [`web/`](web/) | The site. `web/index.html` is the OpenMindstorms home page; [`web/rcx/`](web/rcx/) is the **OpenRCX Workbench** (blocks or NQC text, in-browser compiler, firmware, datalog); [`web/nxt/`](web/nxt/) is the **OpenNXT Workbench** (USB or Bluetooth from the browser, NXC with a server-side compiler, motors, sensors, files); [`web/ev3/`](web/ev3/) is the **OpenEV3 Workbench** (USB HID or Bluetooth from the browser, EV3-G style blocks compiled to EV3 bytecode in the browser, motors, sensors, files). All three run in Chrome or Edge straight from the files, no install |
 | [`tower/`](tower/) | Firmware that turns a **Teensy 4.x or ESP32** plus an IR LED and a 38 kHz receiver into an RCX infrared tower that appears as a normal USB serial port |
-| [`python/`](python/) | `openrcx` / `rcx` and `opennxt` / `nxt`: libraries and command-line tools for scripting both bricks |
+| [`python/`](python/) | `openrcx` / `rcx`, `opennxt` / `nxt` and `openev3` / `ev3`: libraries and command-line tools for scripting all three bricks |
 | [`truenas/`](truenas/) | The TrueNAS app: nginx for the site plus the `nxc` compile container |
 
 **Fastest start:** open [web/rcx/index.html](web/rcx/index.html) in Edge or Chrome, pick your
@@ -234,11 +234,36 @@ nginx already answers any hostname, and the Workbench pages use relative URLs, s
 nothing in the container changes. If you later put the public site on its own bridge
 alias or port, only the tunnel's public hostname entry moves.
 
+## OpenEV3
+
+The EV3 needs no driver: it is a USB HID device, so Chrome and Edge reach it through
+WebHID and Python through `hidapi`. Bluetooth works the same way as the NXT (pair the
+brick in Windows, pick its *outgoing* COM port). The Workbench keeps the stock LEGO
+firmware. Its block editor follows the EV3-G palette (Move Steering, Move Tank, motors,
+display, sound, status light, wait/loop/switch, every EV3 and NXT sensor, data
+operations, variables, parallel beams, My Blocks) and compiles the program to lms2012
+bytecode in the browser. **Run now** sends it as a direct command; **Upload** wraps it
+in an `.rbf` file in the brick's `prjs` folder so it shows up in the brick's own menu.
+For Python, the Workbench links out to [Pybricks](https://pybricks.com/), which runs
+natively on the EV3 and is reversible.
+
+```
+ev3 ports                 # USB bricks and Bluetooth COM ports
+ev3 info                  # name, firmware, battery
+ev3 say "Hello" --line 1  # write to the display
+ev3 drive BC 50 --degrees 360
+ev3 files OpenEV3         # list ../prjs/OpenEV3
+ev3 run OpenEV3/Program   # start an .rbf from the brick
+```
+
 ## Repository layout
 
 ```
 tower/OpenRCX_Tower/   Arduino sketch for the Teensy/ESP32 tower
 python/openrcx/        library: protocol, transports, link, rcx API, firmware/image parsers, simulator, CLI
+python/opennxt/        NXT: protocol, USB/Bluetooth transports, brick API, simulator, CLI
+python/openev3/        EV3: protocol + bytecode encoders, HID/Bluetooth transports, brick API, VM simulator, CLI
+web/rcx/ web/nxt/ web/ev3/  the three Workbenches (web/ev3/js/blocks.js is the EV3-G block compiler)
 python/tests/          unit tests (python -m unittest discover -s python/tests)
 python/examples/       NQC samples
 firmware/              official LEGO firmware images firm0328.lgo (RIS 2.0) and firm0309.lgo (RIS 1.0/1.5)
@@ -267,3 +292,9 @@ behaviour matches the proven tools). See [docs/protocol.md](docs/protocol.md).
   Web Serial path to the real tower not yet exercised from the GUI.
 * Tower firmware: compiles for Teensy 4.0 and ESP32-S3, not yet tried on hardware.
 * USB tower transport: written from the spec, untested.
+* **NXT**: verified on a real NXT over USB and Bluetooth (2026-11-10): info, files,
+  motors, sensors, NXC compile on the server and run on the brick.
+* **EV3**: Python library verified on a real EV3 (firmware V1.09H) over USB HID,
+  2026-11-10: info, battery, display, LED, tone, buttons, file listing. Workbench and
+  block compiler verified in headless Edge against the simulator; not yet run on the
+  brick from the browser, and not yet tried with sensors and motors attached.

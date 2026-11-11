@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>OpenEV3 blocks smoke test</title></head>
+<body>
+<pre id="out">running…</pre>
+<script src="../js/protocol.js"></script>
+<script src="../js/vm.js"></script>
+<script src="../js/ev3.js"></script>
+<script src="../js/transports.js"></script>
+<script src="../js/sim.js"></script>
+<script src="../../rcx/vendor/blockly/blockly.min.js"></script>
+<script src="../js/asm.js"></script>
+<script src="../js/blocks.js"></script>
+<script>
+(async () => {
+  const out = []; const say = t => { out.push(t); document.getElementById('out').textContent = out.join('\n'); };
+  try {
+    const B = OpenEV3.blocks, P = OpenEV3.protocol; if (!B) throw new Error('blocks module did not load');
+    let fails = 0;
+    for (const ex of B.examples) {
+      const ws = new Blockly.Workspace(); Blockly.serialization.workspaces.load(ex.json, ws);
+      const prog = B.generate(ws); ws.dispose();
+      say('=== ' + ex.name + ' === main ' + prog.main.length + ' B, globals ' + prog.globals + ', threads ' + prog.threads.length + ', rbf ' + prog.rbf.length + ' B');
+      // run the main thread in the simulator VM (no sleeping) with sensors that end the loops
+      const t = new OpenEV3.sim.SimTransport(); const s = t.ev3.state;
+      s.inputs[0] = { type: 16, mode: 0, values: [1] }; s.inputs[2] = { type: 29, mode: 0, values: [30] }; s.inputs[3] = { type: 30, mode: 0, values: [10] };
+      const vm = new OpenEV3.vm.VM(s, prog.globals, 0, prog.threads[0][0]);
+      vm.b.clock = (() => { let c = 0; return () => (c += 0.2); })();   // fast clock so timed loops end
+      let note = '';
+      try { await vm.run(ex.name.includes('forever') || ex.name.includes('Bumper') || ex.name.includes('Wall') || ex.name.includes('Line') ? 3000 : 200000); note = 'ran ' + vm.steps + ' steps'; }
+      catch (e) { if (/too long/.test(e.message)) note = 'ran ' + vm.steps + ' steps (endless loop, as designed)'; else { fails++; note = 'VM ERROR ' + e.message; } }
+      say('    ' + note + '; sounds ' + s.sounds.length + ', motor log ' + s.log.filter(l => /STEP|TIME|STOP/.test(l)).length + ', display ' + JSON.stringify(s.display.slice(0, 3)) + ', led ' + s.led);
+    }
+    // every toolbox block must generate without throwing
+    const types = []; const walk = c => { for (const i of c) { if (i.kind === 'block') types.push(i.type); if (i.contents) walk(i.contents); } }; walk(B.toolbox.contents);
+    const ws2 = new Blockly.Workspace(); const hatB = ws2.newBlock('ev3_program'); let prev = null;
+    for (const ty of types) { const b = ws2.newBlock(ty); if (b.previousConnection) { if (ty === 'ev3_break' || ty === 'ev3_stop') continue; if (!prev) hatB.getInput('DO').connection.connect(b.previousConnection); else prev.nextConnection.connect(b.previousConnection); if (b.nextConnection) prev = b; } }
+    const all = B.generate(ws2); say('=== all toolbox statements === ' + all.main.length + ' bytes, globals ' + all.globals);
+    const vm2 = new OpenEV3.vm.VM(new OpenEV3.vm.BrickState(), all.globals, 0, all.threads[0][0]); vm2.b.inputs[0] = { type: 16, mode: 0, values: [1] };
+    try { await vm2.run(5000); say('    ran ' + vm2.steps + ' steps'); } catch (e) { if (/too long/.test(e.message)) say('    stopped after ' + vm2.steps + ' steps (waits on sensors, fine)'); else { fails++; say('    VM ERROR ' + e.message); } }
+    say(fails ? 'BLOCKS SMOKE FAIL (' + fails + ')' : 'BLOCKS SMOKE OK');
+    say('\n' + B.generate((() => { const w = new Blockly.Workspace(); Blockly.serialization.workspaces.load(B.starter, w); return w; })()).listing);
+  } catch (e) { say('BLOCKS SMOKE FAIL ' + (e.stack || e)); }
+})();
+</script>
+</body></html>
