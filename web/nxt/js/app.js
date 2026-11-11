@@ -110,6 +110,19 @@
   }));
   [1, 2, 3, 4].forEach(n => $('simS' + n).addEventListener('input', e => { $('simS' + n + 'v').textContent = e.target.value; if (!simT) return; if (n === 4) simT.nxt.ultrasonicCm[3] = Number(e.target.value); else simT.nxt.sensors[n - 1].scaled = Number(e.target.value); }));
 
+  /* ---------------------------------------------------------- program: name on the brick */
+  // One name, shown in both the Blocks and the NXC text toolbars, remembered, and
+  // derived from the example you pick so you always know what you uploaded.
+  const nameInputs = Array.from(document.querySelectorAll('[data-progname]'));
+  function progName() { return $('progName').value.trim(); }
+  function setProgName(name) {
+    name = String(name).replace(/\.rxe$/i, '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 15) || 'OpenNXT';
+    nameInputs.forEach(i => { i.value = name + '.rxe'; });
+    store.set('progName', name + '.rxe');
+  }
+  nameInputs.forEach(i => i.addEventListener('input', () => { nameInputs.forEach(o => { if (o !== i) o.value = i.value; }); store.set('progName', i.value); }));
+  nameInputs.forEach(i => i.addEventListener('change', () => setProgName(i.value)));
+
   /* ---------------------------------------------------------- program: editor + API */
   const src = $('src'), gutter = $('gutter');
   let errLine = null;
@@ -118,11 +131,11 @@
   src.addEventListener('scroll', () => { gutter.scrollTop = src.scrollTop; });
   src.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); src.setRangeText('    ', src.selectionStart, src.selectionEnd, 'end'); src.dispatchEvent(new Event('input')); } });
   OpenNXT.examples.forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('exampleSel').appendChild(o); });
-  $('exampleSel').addEventListener('change', e => { if (e.target.value === '') return; src.value = OpenNXT.examples[e.target.value].source; src.dispatchEvent(new Event('input')); e.target.value = ''; });
+  $('exampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = OpenNXT.examples[e.target.value]; src.value = ex.source; src.dispatchEvent(new Event('input')); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
   $('btnOpenSrc').addEventListener('click', () => $('fileSrc').click());
-  $('fileSrc').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; src.value = await f.text(); src.dispatchEvent(new Event('input')); $('progName').value = f.name.replace(/\.[^.]+$/, '').slice(0, 15) + '.rxe'; e.target.value = ''; });
+  $('fileSrc').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; src.value = await f.text(); src.dispatchEvent(new Event('input')); setProgName(f.name.replace(/\.[^.]+$/, '')); e.target.value = ''; });
   function saveBlob(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: type || 'application/octet-stream' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
-  $('btnSaveSrc').addEventListener('click', () => saveBlob($('progName').value.replace(/\.rxe$/i, '') + '.nxc', src.value, 'text/plain'));
+  $('btnSaveSrc').addEventListener('click', () => saveBlob(progName().replace(/\.rxe$/i, '') + '.nxc', src.value, 'text/plain'));
   function insertSnippet(text) {
     const s = src.selectionStart, e = src.selectionEnd; let snippet = text;
     if (text.endsWith('\n')) { const ls = src.value.lastIndexOf('\n', s - 1) + 1; const indent = (/^[ \t]*/.exec(src.value.slice(ls, s)) || [''])[0]; const atStart = src.value.slice(ls, s).trim() === ''; snippet = text.replace(/\n(?=.)/g, '\n' + indent); if (!atStart) snippet = '\n' + indent + snippet; snippet = snippet.replace(/\n$/, '\n' + indent); }
@@ -152,7 +165,7 @@
     errLine = null; $('btnCompile').disabled = true;
     setOut([['', 'Compiling on ' + url + ' …']]);
     try {
-      const r = await fetch(url + '?name=' + encodeURIComponent($('progName').value.replace(/\.rxe$/i, '')), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: src.value });
+      const r = await fetch(url + '?name=' + encodeURIComponent(progName().replace(/\.rxe$/i, '')), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: src.value });
       if (r.status === 200) {
         const bytes = new Uint8Array(await r.arrayBuffer());
         setCompiled(bytes, 'compiled just now');
@@ -173,8 +186,8 @@
   }
   $('btnCompile').addEventListener('click', compile);
   $('btnOpenRxe').addEventListener('click', () => $('fileRxe').click());
-  $('fileRxe').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; setCompiled(new Uint8Array(await f.arrayBuffer()), f.name); $('progName').value = f.name.slice(0, 19); setOut([['ok', 'Loaded ' + f.name + ': ' + compiled.length + ' bytes']]); e.target.value = ''; });
-  $('btnSaveRxe').addEventListener('click', () => compiled && saveBlob($('progName').value, compiled));
+  $('fileRxe').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; setCompiled(new Uint8Array(await f.arrayBuffer()), f.name); setProgName(f.name); setOut([['ok', 'Loaded ' + f.name + ': ' + compiled.length + ' bytes']]); e.target.value = ''; });
+  $('btnSaveRxe').addEventListener('click', () => compiled && saveBlob(progName(), compiled));
   function progressUI(barId, textId, label) { const t0 = Date.now(); return (done, total) => { const pct = Math.round(100 * done / Math.max(1, total)); $(barId).style.width = pct + '%'; const el = Date.now() - t0, rate = done / Math.max(el, 1) * 1000; $(textId).textContent = label + ' ' + pct + '%  ' + done + '/' + total + ' B' + (done < total ? '  ETA ' + Math.ceil((total - done) / Math.max(rate, 1)) + ' s' : '  done in ' + (el / 1000).toFixed(1) + ' s'); }; }
   async function uploadProgram() {
     if (!compiled) { if (!(await compile())) return false; }
@@ -214,7 +227,7 @@
   }
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setEditorMode(b.dataset.mode)));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
-  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; loadBlocks(Bk.examples[e.target.value].json); e.target.value = ''; });
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = Bk.examples[e.target.value]; loadBlocks(ex.json); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
   $('btnBlocksNew').addEventListener('click', () => loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'nxt_program', x: 40, y: 40 }] } }));
   $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
   $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
@@ -223,7 +236,7 @@
   async function compileBlocks() { refreshGenerated(); $('genDetails').open = true; const saved = src.value; src.value = blocksCode(); const ok = await compile(); src.value = saved; renderGutter(); return ok; }
   $('btnCompileBlocks').addEventListener('click', compileBlocks);
   $('btnUploadBlocks').addEventListener('click', async () => { if (await compileBlocks()) await uploadProgram(); });
-  $('btnRunBlocks').addEventListener('click', () => run('Run', async () => { await nxt.startProgram($('progName').value.trim()); $('infoProg').textContent = $('progName').value.trim(); }));
+  $('btnRunBlocks').addEventListener('click', () => run('Run', async () => { await nxt.startProgram(progName()); $('infoProg').textContent = progName(); toast('Running ' + progName(), 'good'); }));
   $('btnStopBlocks').addEventListener('click', () => run('Stop', async () => { await nxt.stopProgram(); await nxt.motorsStop(false); }));
   $('btnRun').addEventListener('click', async () => { if (!nxt) { toast('Connect first.', 'bad'); return; } const name = $('progName').value.trim(); await run('Run', async () => { await nxt.startProgram(name); $('infoProg').textContent = name; }); });
   $('btnStopProg').addEventListener('click', () => run('Stop', async () => { await nxt.stopProgram(); await nxt.motorsStop(false); $('infoProg').textContent = '-'; }));
@@ -348,6 +361,7 @@
       const saved = store.get('link', 'usb'); const r = document.querySelector('input[name=link][value="' + saved + '"]'); if (r && !r.disabled) r.checked = true;
     }
     src.value = store.get('src', OpenNXT.examples[0].source); renderGutter();
+    setProgName(store.get('progName', 'OpenNXT.rxe'));
     $('compileUrl').value = store.get('compileUrl', defaultCompileUrl());
     renderApi('');
     setEditorMode(store.get('mode', 'blocks'));
