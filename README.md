@@ -294,7 +294,7 @@ behaviour matches the proven tools). See [docs/protocol.md](docs/protocol.md).
 * USB tower transport: written from the spec, untested.
 * **NXT**: verified on a real NXT over USB and Bluetooth (2026-11-10): info, files,
   motors, sensors, NXC compile on the server and run on the brick.
-* **EV3**: Python library verified on a real EV3 (firmware V1.09H) over USB HID,
-  2026-11-10: info, battery, display, LED, tone, buttons, file listing. Workbench and
-  block compiler verified in headless Edge against the simulator; not yet run on the
-  brick from the browser, and not yet tried with sensors and motors attached.
+* **EV3**: verified on a real EV3 (firmware V1.09H) over USB, 2026-11-11: Python
+  library (info, battery, display, LED, tone, buttons, files) and the Workbench with
+  two motors attached: block program uploaded as an .rbf, found under its name in the
+  brick's menu and run from there, and "Run now" as a direct command.

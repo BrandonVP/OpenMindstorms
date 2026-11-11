@@ -114,10 +114,10 @@
           <input type="file" id="fileBlocks" accept=".json,.ev3blocks" hidden>
           <span style="flex:1"></span>
           <label class="f"><span>Project / program</span><input type="text" id="progName" value="OpenEV3/Program" maxlength="40" class="mono" style="width:16em"></label>
-          <button class="btn primary needs-link" id="btnRunNow">Run now</button>
-          <button class="btn needs-link" id="btnUploadBlocks">Upload</button>
-          <button class="btn run needs-link" id="btnRunUploaded">Run on brick</button>
-          <button class="btn stop needs-link" id="btnStopBlocks">Stop</button>
+          <button class="btn primary needs-link" id="btnRunNow" title="Send the program over the cable and run it immediately. Nothing is stored on the brick. One beam, up to 1 KB.">Run now</button>
+          <button class="btn needs-link" id="btnUploadBlocks" title="Save the program on the brick as an .rbf file under the name on the left, so it appears in the brick&#39;s own menu.">Upload</button>
+          <button class="btn run needs-link" id="btnRunUploaded" title="Start the uploaded .rbf, as if you picked it in the brick&#39;s menu. Needs Upload first; no size limit; parallel beams work.">Run uploaded</button>
+          <button class="btn stop needs-link" id="btnStopBlocks" title="Stop the running program and all motors.">Stop</button>
         </div>
         <div class="mode-blocks">
           <div id="blocklyDiv" class="blockly-host"></div>

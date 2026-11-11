@@ -243,7 +243,7 @@
     const b = build(); if (!b) return;
     if (b.threads.length > 1) { toast('This program has parallel sequences; use Upload, then Run on brick.', 'bad'); return; }
     const size = b.main.length + 7;
-    if (size > P.MAX_MESSAGE) { toast('Program is ' + size + ' bytes, too big to run directly (max 1024). Use Upload, then Run on brick.', 'bad', 7000); return; }
+    if (size > P.MAX_MESSAGE) { toast('Program is ' + size + ' bytes, too big to run directly (max 1024). Use Upload, then Run uploaded.', 'bad', 7000); return; }
     await run('Running', async () => { $('genDetails').open = false; const g = await ev3.runBytecode(b.direct, b.globals, b.locals); setOut([['ok', 'Ran on the brick as a direct command (' + size + ' bytes).' + (g.length ? ' Globals: ' + P.hex(g.subarray(0, 32)) : '')]]); });
   });
   async function uploadProgram() {
