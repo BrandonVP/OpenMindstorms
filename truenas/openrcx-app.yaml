@@ -1,0 +1,31 @@
+# OpenRCX Workbench: TrueNAS SCALE custom app (Apps > Discover Apps > ⋮ > Install via YAML)
+# App name must be lowercase: openrcx
+#
+# Built on the NAS from the source in \\TRUENAS\openrcx\src (copy it there with
+# deploy-to-nas.ps1). Nothing is pulled from GitHub.
+#
+#   /mnt/apps/configs/openrcx/src    = \\TRUENAS\openrcx\src    (source to build)
+#   /mnt/apps/configs/openrcx/certs  = \\TRUENAS\openrcx\certs  (self-signed TLS cert, made on first start)
+#
+# OpenRCX gets its own address, 192.168.68.208 (an alias on the br0 bridge).
+# Open  https://192.168.68.208  in Chrome or Edge on the PC the IR tower is plugged into,
+# accept the certificate warning once (the cert is self-signed), and connect.
+# Plain http://192.168.68.208 just redirects to https: browsers only hand out
+# serial ports to secure pages.
+
+services:
+  openrcx:
+    build:
+      context: /mnt/apps/configs/openrcx/src
+      dockerfile: Dockerfile
+    image: openrcx:local
+    pull_policy: build             # rebuild from src every time the app starts
+    ports:
+      - 192.168.68.208:80:80       # bridge alias IP : host port : container port
+      - 192.168.68.208:443:443
+    volumes:
+      - /mnt/apps/configs/openrcx/certs:/certs
+    environment:
+      SERVER_IP: 192.168.68.208    # goes into the certificate's subjectAltName
+      TZ: America/Chicago
+    restart: unless-stopped

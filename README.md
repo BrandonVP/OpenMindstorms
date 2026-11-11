@@ -149,6 +149,26 @@ with [Zadig](https://zadig.akeo.ie/) instead of LEGO's driver, then
 (The 64-bit `tower164.zip` driver on the NAS is only for ROBOLAB/LabVIEW and does not
 help other software.)
 
+## Hosting the Workbench on TrueNAS
+
+The GUI is static files, so it can live on the NAS and be opened from any PC on the
+network; the browser on *that* PC still talks to the tower, the NAS only serves the
+page. Because Chrome and Edge hand out serial ports only to pages served over HTTPS,
+the container runs nginx with a self-signed certificate it generates on first start.
+
+```
+powershell -ExecutionPolicy Bypass -File .\deploy-to-nas.ps1     # copies HEAD to \\TRUENAS\openrcx\src
+```
+
+Then in TrueNAS SCALE: *Apps > Discover Apps > ⋮ > Install via YAML*, name `openrcx`,
+paste [truenas/openrcx-app.yaml](truenas/openrcx-app.yaml). The app builds the image
+from `/mnt/apps/configs/openrcx/src` ([Dockerfile](Dockerfile)) and listens on
+**https://192.168.68.208**. The first visit shows a certificate warning (self-signed);
+accept it once. After a redeploy, Stop and Start the app to rebuild.
+
+If you would rather skip the certificate, open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
+add `http://192.168.68.208`, and use plain HTTP.
+
 ## Repository layout
 
 ```

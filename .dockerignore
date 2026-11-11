@@ -1,0 +1,7 @@
+.git
+python/
+tower/
+tools/
+firmware/
+*.rcx
+__pycache__/

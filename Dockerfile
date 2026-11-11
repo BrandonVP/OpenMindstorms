@@ -1,0 +1,31 @@
+# OpenRCX Workbench as a static site behind nginx.
+#
+# Chrome and Edge only expose serial ports to pages served over HTTPS, so the
+# container serves HTTPS with a self-signed certificate (generated on first start
+# into /certs, which TrueNAS mounts from the openrcx dataset so it survives
+# rebuilds) and redirects plain HTTP to it.
+#
+#   docker build -t openrcx:local .
+#   docker run -p 80:80 -p 443:443 -v ./certs:/certs -e SERVER_IP=192.168.68.208 openrcx:local
+
+FROM nginx:1.27-alpine
+
+RUN apk add --no-cache openssl
+
+COPY truenas/nginx.conf /etc/nginx/conf.d/default.conf
+COPY truenas/10-gen-cert.sh /docker-entrypoint.d/10-gen-cert.sh
+# strip any CRLF a Windows checkout may have added, then make it executable
+RUN sed -i 's/\r$//' /docker-entrypoint.d/10-gen-cert.sh /etc/nginx/conf.d/default.conf \
+    && chmod +x /docker-entrypoint.d/10-gen-cert.sh
+
+# Only what the browser needs: the Workbench, the docs it links to, and a landing redirect.
+COPY gui/ /usr/share/nginx/html/gui/
+COPY docs/ /usr/share/nginx/html/docs/
+COPY README.md /usr/share/nginx/html/README.md
+
+ENV SERVER_IP=192.168.68.208
+
+EXPOSE 80 443
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1/healthz || exit 1
