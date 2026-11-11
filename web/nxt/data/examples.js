@@ -74,9 +74,11 @@ task main()
     SetSensorLight(S3);
     DeleteFile("log.txt");
     CreateFile("log.txt", 2048, handle);
+    int value;
     repeat (100)
     {
-        WriteLn(handle, SENSOR_3);
+        value = SENSOR_3;          // WriteLn wants a plain variable
+        WriteLn(handle, value);
         Wait(100);
     }
     CloseFile(handle);

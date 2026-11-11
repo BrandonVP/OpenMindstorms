@@ -161,7 +161,8 @@ var OpenNXT = (typeof OpenNXT !== 'undefined') ? OpenNXT : {};
   F.nxt_tone = b => 'PlayTone(' + b.getFieldValue('NOTE') + ', ' + ms(b.getFieldValue('SECS')) + ');\n' + (b.getFieldValue('WAIT') === 'WAIT' ? 'Wait(' + ms(b.getFieldValue('SECS')) + ');\n' : '');
   F.nxt_tone_hz = b => 'PlayTone(' + val(b, 'HZ', 440) + ', ' + ms(b.getFieldValue('SECS')) + ');\nWait(' + ms(b.getFieldValue('SECS')) + ');\n';
   F.nxt_sound_file = b => 'PlayFile("' + b.getFieldValue('FILE') + '");\n' + (b.getFieldValue('WAIT') === 'WAIT' ? 'until (SoundFlags() == SOUND_FLAGS_IDLE);\n' : '');
-  F.nxt_display_text = b => 'TextOut(0, ' + b.getFieldValue('LINE') + ', ' + asString(b, 'TEXT') + ', DRAW_OPT_CLEAR_EOL);\n';
+  // NBC 1.2.1.r4 has no DRAW_OPT_CLEAR_EOL: blank the line with spaces first.
+  F.nxt_display_text = b => 'TextOut(0, ' + b.getFieldValue('LINE') + ', "                ");\nTextOut(0, ' + b.getFieldValue('LINE') + ', ' + asString(b, 'TEXT') + ');\n';
   F.nxt_display_clear = () => 'ClearScreen();\n';
   F.nxt_display_picture = b => 'GraphicOut(0, 0, "' + b.getFieldValue('FILE') + '");\n';
   F.nxt_wait = b => 'Wait(' + ms(b.getFieldValue('SECS')) + ');\n';
