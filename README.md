@@ -1,9 +1,12 @@
-# OpenRCX
+# OpenMindstorms
 
-Program and control the original yellow LEGO Mindstorms **RCX** from a modern 64-bit
-PC, no Windows XP virtual machine required.
+Free, browser-based tools for every LEGO Mindstorms brick: the **RCX** (1998), the
+**NXT** (2006) and the **EV3** (2013). No Windows XP virtual machine, no 32-bit
+drivers, nothing to install: Chrome or Edge talks to the brick directly.
 
-This repository is the home of **OpenMindstorms**: one site, one app per brick.
+One site, one app per brick: **OpenRCX**, **OpenNXT** and **OpenEV3**, launched from
+the home page at www.openmindstorms.com (or self-hosted, see below). The RCX part
+is where this project started, so the RCX sections below are the longest.
 
 | Piece | What it is |
 | --- | --- |
@@ -20,6 +23,12 @@ classic tools keep working too: **BricxCC** and **NQC** on Windows 11, WebPBrick
 Chromium browser, firmdl3 on Linux.
 
 ## Why this exists
+
+Every Mindstorms generation has lost its official software: the RCX tools need a
+32-bit Windows, the NXT-G and EV3 apps are discontinued or end-of-life. The bricks
+themselves still work, and every one of them speaks a documented protocol.
+
+### The RCX in particular
 
 The RCX only ever shipped with two towers. The serial tower needs an RS-232 port and
 works fine through any USB-serial adapter. The USB tower (the one in Robotics Invention
@@ -179,9 +188,9 @@ with [Zadig](https://zadig.akeo.ie/) instead of LEGO's driver, then
 (The 64-bit `tower164.zip` driver on the NAS is only for ROBOLAB/LabVIEW and does not
 help other software.)
 
-## Hosting the Workbench on TrueNAS
+## Hosting the site on TrueNAS
 
-The GUI is static files, so it can live on the NAS and be opened from any PC on the
+The site is static files, so it can live on the NAS and be opened from any PC on the
 network; the browser on *that* PC still talks to the tower, the NAS only serves the
 page. Because Chrome and Edge hand out serial ports only to pages served over HTTPS,
 the container runs nginx with a self-signed certificate it generates on first start.
@@ -212,9 +221,11 @@ which Edge and Chrome use. The same file is also downloadable from
 If you would rather skip certificates, open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
 add `http://openrcx.vp`, and use plain HTTP; the page is served on both ports.
 
-The app has two containers: `openrcx` (nginx, the site) and `nxc` (the NXC compiler
-behind `/api/nxc`, used by OpenNXT). When the YAML changes, update it in TrueNAS under
-Apps > openrcx > Edit before Stop/Start.
+The app has three containers: `openrcx` (nginx, the site), `nxc` (the NXC compiler
+behind `/api/nxc`, used by OpenNXT) and `stats` (usage counters behind `/api/stats`).
+When the YAML changes, update it in TrueNAS under Apps > openrcx > Edit before
+Stop/Start. The app, share and dataset keep the name `openrcx` from the first
+deployment; renaming them would mean reinstalling the app, so they stay.
 
 ### Usage counters and the dashboard
 

@@ -1,4 +1,4 @@
-# Trust the OpenRCX Workbench's self-signed certificate on this Windows PC, so Edge
+# Trust the OpenMindstorms server's self-signed certificate on this Windows PC, so Edge
 # and Chrome open https://openrcx.vp (or the IP) with a normal padlock and no warning.
 #
 #   Run as Administrator (whole machine, no prompts):
@@ -21,7 +21,7 @@ Write-Host "Valid for  : $($cert.Extensions | Where-Object { $_.Oid.FriendlyName
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $store = if ($isAdmin) { 'Cert:\LocalMachine\Root' } else { 'Cert:\CurrentUser\Root' }
 
-# remove older OpenRCX certificates so only the current one is trusted
+# remove older OpenMindstorms / OpenRCX certificates so only the current one is trusted
 Get-ChildItem $store | Where-Object { $_.Subject -eq $cert.Subject -and $_.Thumbprint -ne $cert.Thumbprint } | ForEach-Object {
     Write-Host "Removing old certificate $($_.Thumbprint)"
     Remove-Item -Path (Join-Path $store $_.Thumbprint)

@@ -1,11 +1,11 @@
-# OpenRCX Workbench as a static site behind nginx.
+# OpenMindstorms (OpenRCX / OpenNXT / OpenEV3) as a static site behind nginx.
 #
 # Chrome and Edge only expose serial ports to pages served over HTTPS, so the
 # container serves HTTPS with a self-signed certificate (generated on first start
 # into /certs, which TrueNAS mounts from the openrcx dataset so it survives
 # rebuilds) and redirects plain HTTP to it.
 #
-#   docker build -t openrcx:local .
+#   docker build -t openrcx:local .          (image/app name kept from the first deployment)
 #   docker run -p 80:80 -p 443:443 -v ./certs:/certs -e SERVER_IP=192.168.68.208 openrcx:local
 
 FROM nginx:1.27-alpine
@@ -18,7 +18,7 @@ COPY truenas/10-gen-cert.sh /docker-entrypoint.d/10-gen-cert.sh
 RUN sed -i 's/\r$//' /docker-entrypoint.d/10-gen-cert.sh /etc/nginx/conf.d/default.conf \
     && chmod +x /docker-entrypoint.d/10-gen-cert.sh
 
-# Only what the browser needs: the Workbench, the docs it links to, and a landing redirect.
+# Only what the browser needs: the site, and the docs it links to.
 COPY web/ /usr/share/nginx/html/
 COPY docs/ /usr/share/nginx/html/docs/
 # Files copied onto the NAS share over SMB arrive owner-only (0600/0700) and COPY

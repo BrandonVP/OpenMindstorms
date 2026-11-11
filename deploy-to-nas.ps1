@@ -1,4 +1,5 @@
-# Copies the committed source (HEAD) to the NAS share that TrueNAS builds OpenRCX from.
+# Copies the committed source (HEAD) to the NAS share that TrueNAS builds OpenMindstorms from
+# (the app, share and dataset are still called openrcx from the first deployment).
 #   powershell -ExecutionPolicy Bypass -File .\deploy-to-nas.ps1
 # Then in TrueNAS: Apps > openrcx > Stop, Start  (the app rebuilds from src on start).
 # First time: Apps > Discover Apps > ⋮ > Install via YAML, paste truenas\openrcx-app.yaml.

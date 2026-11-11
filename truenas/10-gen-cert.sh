@@ -12,10 +12,10 @@ SAN="IP:$IP"
 for n in $(echo "$NAMES" | tr ',' ' '); do SAN="$SAN,DNS:$n"; done
 mkdir -p "$CERT_DIR"
 if [ ! -s "$CERT_DIR/server.crt" ] || [ ! -s "$CERT_DIR/server.key" ] || [ "$(cat "$CERT_DIR/san.txt" 2>/dev/null)" != "$SAN" ]; then
-    echo "OpenRCX: generating self-signed certificate for $SAN"
+    echo "OpenMindstorms: generating self-signed certificate for $SAN"
     openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
         -keyout "$CERT_DIR/server.key" -out "$CERT_DIR/server.crt" \
-        -subj "/CN=OpenRCX Workbench" \
+        -subj "/CN=OpenMindstorms" \
         -addext "subjectAltName=$SAN" \
         -addext "basicConstraints=CA:FALSE" \
         -addext "keyUsage=digitalSignature,keyEncipherment" \

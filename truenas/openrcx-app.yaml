@@ -1,5 +1,6 @@
-# OpenRCX Workbench: TrueNAS SCALE custom app (Apps > Discover Apps > ⋮ > Install via YAML)
-# App name must be lowercase: openrcx
+# OpenMindstorms (OpenRCX / OpenNXT / OpenEV3): TrueNAS SCALE custom app
+# (Apps > Discover Apps > ⋮ > Install via YAML).  App name must be lowercase: openrcx
+# (kept from the first deployment, together with the share and dataset names).
 #
 # Built on the NAS from the source in \\TRUENAS\openrcx\src (copy it there with
 # deploy-to-nas.ps1). Nothing is pulled from GitHub.
@@ -11,7 +12,7 @@
 # Usage dashboard: https://openrcx.vp/stats/ (or www.openmindstorms.com/stats/), opened
 # with the STATS_KEY below.  Pick any long random string before installing.
 #
-# OpenRCX gets its own address, 192.168.68.208 (an alias on the br0 bridge), and the
+# The site gets its own address, 192.168.68.208 (an alias on the br0 bridge), and the
 # local DNS name openrcx.vp.
 # Open  https://openrcx.vp  in Chrome or Edge on the PC the IR tower is plugged into.
 # The certificate is self-signed: run truenas\trust-cert.ps1 once on that PC (it reads

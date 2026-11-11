@@ -1,4 +1,4 @@
-# Plan: adding the LEGO Mindstorms NXT to OpenRCX
+# Plan: adding the LEGO Mindstorms NXT to OpenMindstorms (then called OpenRCX)
 
 Status: proposal, 2026-11-10. Nothing in this document is built yet.
 
