@@ -40,6 +40,7 @@ services:
     depends_on:
       - nxc
       - stats
+      - accounts
     restart: unless-stopped
 
   # NXC compile service for OpenNXT (the NXC compiler is a native program, so the
@@ -66,5 +67,29 @@ services:
       - /mnt/apps/configs/openrcx/stats:/data
     environment:
       STATS_KEY: change-me-to-a-long-random-string
+      TZ: America/Chicago
+    restart: unless-stopped
+
+  # Optional accounts: "Sign in with Google / GitHub" and the online program
+  # library, SQLite on the accounts dataset (nightly copies in accounts/backups,
+  # point a Cloud Sync task at that folder).  Register the two OAuth apps with the
+  # callback URLs https://www.openmindstorms.com/api/auth/callback/google and
+  # .../callback/github and paste the ids and secrets here.  With no ids set the
+  # pages simply show no sign-in.
+  accounts:
+    build:
+      context: /mnt/apps/configs/openrcx/src/truenas/accounts-service
+      dockerfile: Dockerfile
+    image: openrcx-accounts:local
+    pull_policy: build
+    volumes:
+      - /mnt/apps/configs/openrcx/accounts:/data
+    environment:
+      SITE_URL: https://www.openmindstorms.com
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      GITHUB_CLIENT_ID: ""
+      GITHUB_CLIENT_SECRET: ""
+      BACKUP_HOUR: "3"
       TZ: America/Chicago
     restart: unless-stopped

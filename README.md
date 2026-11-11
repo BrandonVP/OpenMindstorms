@@ -240,8 +240,10 @@ which Edge and Chrome use. The same file is also downloadable from
 If you would rather skip certificates, open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
 add `http://openrcx.vp`, and use plain HTTP; the page is served on both ports.
 
-The app has three containers: `openrcx` (nginx, the site), `nxc` (the NXC compiler
-behind `/api/nxc`, used by OpenNXT) and `stats` (usage counters behind `/api/stats`).
+The app has four containers: `openrcx` (nginx, the site), `nxc` (the NXC compiler
+behind `/api/nxc`, used by OpenNXT), `stats` (usage counters behind `/api/stats`) and
+`accounts` (optional sign-in and the program library behind `/api/auth` and
+`/api/programs`).
 When the YAML changes, update it in TrueNAS under Apps > openrcx > Edit before
 Stop/Start. The app, share and dataset keep the name `openrcx` from the first
 deployment; renaming them would mean reinstalling the app, so they stay.
@@ -266,6 +268,37 @@ installing; the key is sent in a header and kept only in your browser). It shows
 range totals against all-time totals, a per-day chart, per-app and per-link
 breakdowns, browsers and operating systems, failures, and the newest events, and
 can download the raw events as CSV.
+
+### Accounts and the program library (optional)
+
+Nobody has to sign in: every Workbench keeps its draft in the browser and opens and
+saves files as before. Signing in adds a **library**: programs saved by name on the
+server, opened from any computer, autosaved while you work (5 s after the last change,
+once a program has been saved by name). The Program view of each Workbench gets a
+Library strip (Save, Save as, My programs, Ctrl+S) and the top bar a Sign in pill.
+
+Sign-in is "Continue with Google" or "Continue with GitHub"; the `accounts` container
+(`truenas/accounts-service/`, Python standard library + SQLite on the `accounts`
+dataset) stores the provider's id, the display name and e-mail, and the programs.
+No mail is ever sent; the e-mail is only shown back as "signed in as". Export (all
+programs as one JSON file) and Delete account are in the account menu.
+
+To enable it, register two OAuth apps and paste their ids and secrets into the YAML:
+
+* Google: [console.cloud.google.com](https://console.cloud.google.com/apis/credentials) >
+  Credentials > Create > OAuth client ID > Web application, authorised redirect URI
+  `https://www.openmindstorms.com/api/auth/callback/google`. The consent screen only
+  needs the non-sensitive `openid email profile` scopes, so no verification is required.
+* GitHub: Settings > Developer settings > OAuth Apps > New, callback URL
+  `https://www.openmindstorms.com/api/auth/callback/github`.
+
+With neither configured the pages show no sign-in at all. The callback goes to the
+public address, so sign-in works through the tunnel, not on the LAN address; for local
+work the service accepts `DEV_LOGIN: "1"` and signs in a fixed test user.
+
+The service writes a copy of its database every night (`BACKUP_HOUR`, default 3) into
+`accounts/backups/` on the share, keeping 14 days. Point a TrueNAS Cloud Sync task at
+that folder (for example to OneDrive) so people's programs survive the NAS.
 
 ### Public site: www.openmindstorms.com through the Cloudflare tunnel
 

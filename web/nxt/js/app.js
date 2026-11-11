@@ -133,13 +133,13 @@
   const src = $('src'), gutter = $('gutter');
   let errLine = null;
   function renderGutter() { const n = src.value.split('\n').length; let html = ''; for (let i = 1; i <= n; i++) html += (i === errLine ? '<span class="err">' + i + '</span>' : i) + '\n'; gutter.innerHTML = html; gutter.scrollTop = src.scrollTop; }
-  src.addEventListener('input', () => { errLine = null; renderGutter(); store.set('src', src.value); });
+  src.addEventListener('input', () => { errLine = null; renderGutter(); store.set('src', src.value); if (window.OMAccount) OMAccount.changed(); });
   src.addEventListener('scroll', () => { gutter.scrollTop = src.scrollTop; });
   src.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); src.setRangeText('    ', src.selectionStart, src.selectionEnd, 'end'); src.dispatchEvent(new Event('input')); } });
   OpenNXT.examples.forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('exampleSel').appendChild(o); });
-  $('exampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = OpenNXT.examples[e.target.value]; hit('example', ex.name); src.value = ex.source; src.dispatchEvent(new Event('input')); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
+  $('exampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = OpenNXT.examples[e.target.value]; hit('example', ex.name); if (window.OMAccount) OMAccount.unlink(); src.value = ex.source; src.dispatchEvent(new Event('input')); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
   $('btnOpenSrc').addEventListener('click', () => $('fileSrc').click());
-  $('fileSrc').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; src.value = await f.text(); src.dispatchEvent(new Event('input')); setProgName(f.name.replace(/\.[^.]+$/, '')); e.target.value = ''; });
+  $('fileSrc').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; if (window.OMAccount) OMAccount.unlink(); src.value = await f.text(); src.dispatchEvent(new Event('input')); setProgName(f.name.replace(/\.[^.]+$/, '')); e.target.value = ''; });
   function saveBlob(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: type || 'application/octet-stream' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
   $('btnSaveSrc').addEventListener('click', () => saveBlob(progName().replace(/\.rxe$/i, '') + '.nxc', src.value, 'text/plain'));
   function insertSnippet(text) {
@@ -216,7 +216,7 @@
   let bws = null, editorMode = 'text';
   const blocksCode = () => bws ? Bk.generate(bws) : '';
   function refreshGenerated() { if (!bws) return; try { $('genCode').textContent = blocksCode(); } catch (e) { $('genCode').textContent = '// ' + e.message; } }
-  function saveBlocksState() { if (!bws) return; try { store.set('blocks', JSON.stringify(Blockly.serialization.workspaces.save(bws))); } catch (e) { /* ignore */ } }
+  function saveBlocksState() { if (!bws) return; try { store.set('blocks', JSON.stringify(Blockly.serialization.workspaces.save(bws))); } catch (e) { /* ignore */ } if (window.OMAccount) OMAccount.changed(); }
   function loadBlocks(json) { if (!bws) return; bws.clear(); Blockly.serialization.workspaces.load(json, bws); refreshGenerated(); saveBlocksState(); }
   function ensureBlockly() {
     if (bws || !Bk) return;
@@ -240,10 +240,10 @@
   }
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setEditorMode(b.dataset.mode); hit('editor_mode', b.dataset.mode); }));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
-  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = Bk.examples[e.target.value]; hit('example', ex.name); loadBlocks(ex.json); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
-  $('btnBlocksNew').addEventListener('click', () => loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'nxt_program', x: 40, y: 40 }] } }));
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = Bk.examples[e.target.value]; hit('example', ex.name); if (window.OMAccount) OMAccount.unlink(); loadBlocks(ex.json); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
+  $('btnBlocksNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'nxt_program', x: 40, y: 40 }] } }); });
   $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
-  $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
+  $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { if (window.OMAccount) OMAccount.unlink(); loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
   $('btnSaveBlocks').addEventListener('click', () => bws && saveBlob('program.nxtblocks.json', JSON.stringify(Blockly.serialization.workspaces.save(bws), null, 1), 'application/json'));
   $('btnBlocksToText').addEventListener('click', () => { src.value = blocksCode(); src.dispatchEvent(new Event('input')); setEditorMode('text'); toast('Generated NXC copied to the text editor'); });
   async function compileBlocks() { refreshGenerated(); $('genDetails').open = true; const saved = src.value; src.value = blocksCode(); compileFrom = 'blocks'; const ok = await compile(); compileFrom = 'text'; src.value = saved; renderGutter(); return ok; }
@@ -381,4 +381,14 @@
     const h = location.hash.slice(1); showView(VIEWS.includes(h) ? h : store.get('view', 'connect'));
   }
   init();
+  // Optional sign-in + online library (web/shared/account.js); invisible without the service.
+  if (window.OMAccount) OMAccount.init({
+    app: 'nxt', store, toast,
+    get: () => ({ name: progName().replace(/\.rxe$/i, '') || 'Program', mode: editorMode, blocks: bws ? JSON.stringify(Blockly.serialization.workspaces.save(bws)) : store.get('blocks', ''), src: src.value }),
+    set: p => {
+      setEditorMode(p.mode === 'blocks' ? 'blocks' : 'text');
+      if (p.blocks) { try { ensureBlockly(); loadBlocks(JSON.parse(p.blocks)); } catch (e) { /* not a blocks program */ } }
+      src.value = p.src || ''; src.dispatchEvent(new Event('input')); setProgName(p.name);
+    },
+  });
 })();

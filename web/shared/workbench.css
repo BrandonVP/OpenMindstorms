@@ -198,3 +198,21 @@ th { font-family: var(--display); font-size: 11.5px; text-transform: uppercase; 
 /* link back to the OpenMindstorms home page, in the top bar brand */
 .brand .home { text-decoration: none; color: var(--muted); font-size: 18px; line-height: 1; margin-right: 2px; }
 .brand .home:hover { color: var(--ink); }
+
+/* ---- optional accounts + online program library (web/shared/account.js) ---- */
+.account { position: relative; margin-left: 4px; }
+.account .pill { cursor: pointer; }
+.account .pill:hover { border-color: var(--muted); }
+.account-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 260px; max-width: 320px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.25); padding: 10px; z-index: 30; display: flex; flex-direction: column; gap: 6px; }
+.account-menu .btn { text-align: left; text-decoration: none; display: block; }
+.account-menu .who { font-size: 12.5px; color: var(--muted); line-height: 1.4; padding: 2px 2px 4px; }
+.library { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 10px; padding: 7px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; }
+.library .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.library.saved .dot { background: var(--good); } .library.dirty .dot { background: var(--warn); } .library.conflict .dot { background: var(--bad); }
+.library .spacer { flex: 1; }
+dialog.library-dlg { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 16px; width: min(720px, 92vw); max-height: 80vh; font: 14px/1.5 var(--body); }
+dialog.library-dlg::backdrop { background: rgba(0,0,0,.45); }
+dialog.library-dlg h2 { font-size: 18px; }
+dialog.library-dlg input[type=search] { max-width: 200px; }
+dialog.library-dlg .tablewrap { max-height: 60vh; }
+dialog.library-dlg td:first-child { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }

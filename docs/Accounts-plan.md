@@ -1,6 +1,9 @@
 # Plan: optional accounts so people can save their work
 
-Status: proposal, 2026-11-11. Nothing built yet.
+Status: phases 1 and 2 built 2026-11-11 (service, Google/GitHub sign-in, library in all three
+Workbenches; verified locally with DEV_LOGIN and headless Edge). Decisions taken: Google + GitHub,
+autosave on, share links deferred, nightly database copies for a OneDrive Cloud Sync task.
+Not yet done: the two OAuth registrations, the live test through the tunnel, phases 3 and 4.
 
 ## Goal
 

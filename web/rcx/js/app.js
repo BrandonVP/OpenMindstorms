@@ -187,7 +187,7 @@
     gutter.innerHTML = html;
     gutter.scrollTop = src.scrollTop;
   }
-  src.addEventListener('input', () => { errLine = null; renderGutter(); store.set('src', src.value); });
+  src.addEventListener('input', () => { errLine = null; renderGutter(); store.set('src', src.value); if (window.OMAccount) OMAccount.changed(); });
   src.addEventListener('scroll', () => { gutter.scrollTop = src.scrollTop; });
   src.addEventListener('keydown', e => {
     if (e.key === 'Tab') { e.preventDefault(); const s = src.selectionStart; src.setRangeText('    ', s, src.selectionEnd, 'end'); src.dispatchEvent(new Event('input')); }
@@ -195,7 +195,7 @@
   OpenRCX.examples.forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('exampleSel').appendChild(o); });
   $('exampleSel').addEventListener('change', e => {
     if (e.target.value === '') return;
-    src.value = OpenRCX.examples[e.target.value].source;
+    if (window.OMAccount) OMAccount.unlink(); src.value = OpenRCX.examples[e.target.value].source;
     hit('example', OpenRCX.examples[e.target.value].name);
     src.dispatchEvent(new Event('input'));
     e.target.value = '';
@@ -203,7 +203,7 @@
   $('btnOpenSrc').addEventListener('click', () => $('fileSrc').click());
   $('fileSrc').addEventListener('change', async e => {
     const f = e.target.files[0]; if (!f) return;
-    src.value = await f.text(); src.dispatchEvent(new Event('input'));
+    if (window.OMAccount) OMAccount.unlink(); src.value = await f.text(); src.dispatchEvent(new Event('input'));
     toast('Opened ' + f.name); e.target.value = '';
   });
   function saveBlob(name, data, type) {
@@ -353,7 +353,7 @@
   }
   function saveBlocksState() {
     if (!bws) return;
-    try { store.set('blocks', JSON.stringify(Blockly.serialization.workspaces.save(bws))); } catch (e) { /* ignore */ }
+    try { store.set('blocks', JSON.stringify(Blockly.serialization.workspaces.save(bws))); } catch (e) { /* ignore */ } if (window.OMAccount) OMAccount.changed();
   }
   function loadBlocks(json) {
     if (!bws) return;
@@ -389,12 +389,12 @@
   }
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setEditorMode(b.dataset.mode); hit('editor_mode', b.dataset.mode); }));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
-  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; loadBlocks(Bk.examples[e.target.value].json); hit('example', Bk.examples[e.target.value].name); e.target.value = ''; });
-  $('btnBlocksNew').addEventListener('click', () => loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'rcx_program', x: 40, y: 40 }] } }));
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '') return; if (window.OMAccount) OMAccount.unlink(); loadBlocks(Bk.examples[e.target.value].json); hit('example', Bk.examples[e.target.value].name); e.target.value = ''; });
+  $('btnBlocksNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'rcx_program', x: 40, y: 40 }] } }); });
   $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
   $('fileBlocks').addEventListener('change', async e => {
     const f = e.target.files[0]; if (!f) return;
-    try { loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file (' + err.message + ')', 'bad'); }
+    try { if (window.OMAccount) OMAccount.unlink(); loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file (' + err.message + ')', 'bad'); }
     e.target.value = '';
   });
   $('btnSaveBlocks').addEventListener('click', () => bws && saveBlob('program.rcxblocks.json', JSON.stringify(Blockly.serialization.workspaces.save(bws), null, 1), 'application/json'));
@@ -573,4 +573,14 @@
     if (location.protocol === 'file:' && !serialOk) logNote('Web Serial unavailable: use Chrome or Edge', 'err');
   }
   init();
+  // Optional sign-in + online library (web/shared/account.js); invisible without the service.
+  if (window.OMAccount) OMAccount.init({
+    app: 'rcx', store, toast,
+    get: () => ({ name: 'Program', mode: editorMode, blocks: bws ? JSON.stringify(Blockly.serialization.workspaces.save(bws)) : store.get('blocks', ''), src: src.value }),
+    set: p => {
+      setEditorMode(p.mode === 'blocks' ? 'blocks' : 'text');
+      if (p.blocks) { try { ensureBlockly(); loadBlocks(JSON.parse(p.blocks)); } catch (e) { /* not a blocks program */ } }
+      src.value = p.src || ''; src.dispatchEvent(new Event('input'));
+    },
+  });
 })();

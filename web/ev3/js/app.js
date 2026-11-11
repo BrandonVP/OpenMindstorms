@@ -213,7 +213,7 @@
   const Bk = OpenEV3.blocks, A = OpenEV3.asm;
   let bws = null, editorMode = 'blocks', built = null;
   function refreshGenerated() { if (!bws || !Bk) return; try { built = Bk.generate(bws); $('genCode').textContent = built.listing; } catch (e) { built = null; $('genCode').textContent = '// ' + e.message; } }
-  function saveBlocksState() { if (!bws) return; try { store.set('blocks', JSON.stringify(Blockly.serialization.workspaces.save(bws))); } catch (e) { /* ignore */ } }
+  function saveBlocksState() { if (!bws) return; try { store.set('blocks', JSON.stringify(Blockly.serialization.workspaces.save(bws))); } catch (e) { /* ignore */ } if (window.OMAccount) OMAccount.changed(); }
   function loadBlocks(json) { if (!bws) return; bws.clear(); Blockly.serialization.workspaces.load(json, bws); refreshGenerated(); saveBlocksState(); }
   function ensureBlockly() {
     if (bws || !Bk) return;
@@ -235,10 +235,10 @@
   }
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setEditorMode(b.dataset.mode); hit('editor_mode', b.dataset.mode); }));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
-  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '' || !Bk) return; const ex = Bk.examples[e.target.value]; hit('example', ex.name); loadBlocks(ex.json); $('progName').value = 'OpenEV3/' + ex.name.split(/[:(]/)[0].replace(/\s+/g, ''); e.target.value = ''; });
-  $('btnBlocksNew').addEventListener('click', () => loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'ev3_program', x: 40, y: 40 }] } }));
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '' || !Bk) return; const ex = Bk.examples[e.target.value]; hit('example', ex.name); if (window.OMAccount) OMAccount.unlink(); loadBlocks(ex.json); $('progName').value = 'OpenEV3/' + ex.name.split(/[:(]/)[0].replace(/\s+/g, ''); e.target.value = ''; });
+  $('btnBlocksNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'ev3_program', x: 40, y: 40 }] } }); });
   $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
-  $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
+  $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { if (window.OMAccount) OMAccount.unlink(); loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
   $('btnSaveBlocks').addEventListener('click', () => bws && saveBlob('program.ev3blocks.json', JSON.stringify(Blockly.serialization.workspaces.save(bws), null, 1), 'application/json'));
   function setOut(lines) { const out = $('buildOut'); out.innerHTML = ''; lines.forEach(([cls, t]) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; out.appendChild(s); }); }
   function build() { refreshGenerated(); hit('compile', 'blocks', !!built); if (!built) { setOut([['e', $('genCode').textContent]]); return null; } setOut([['ok', 'Built: ' + built.main.length + ' bytes of bytecode, ' + built.globals + ' global bytes, ' + built.threads.length + ' thread' + (built.threads.length === 1 ? '' : 's')]]); return built; }
@@ -280,4 +280,14 @@
     const h = location.hash.slice(1); showView(VIEWS.includes(h) ? h : store.get('view', 'connect'));
   }
   init();
+  // Optional sign-in + online library (web/shared/account.js); invisible without the service.
+  if (window.OMAccount) OMAccount.init({
+    app: 'ev3', store, toast,
+    get: () => ({ name: $('progName').value.trim().replace(/^OpenEV3\//, '').replace(/\.rbf$/i, '') || 'Program', mode: editorMode, blocks: bws ? JSON.stringify(Blockly.serialization.workspaces.save(bws)) : store.get('blocks', ''), src: '' }),
+    set: p => {
+      setEditorMode('blocks');
+      if (p.blocks) { try { ensureBlockly(); loadBlocks(JSON.parse(p.blocks)); } catch (e) { /* not a blocks program */ } }
+      const n = p.name.replace(/[^A-Za-z0-9_\- ]/g, '').trim().slice(0, 30); if (n) { $('progName').value = 'OpenEV3/' + n; store.set('progName', 'OpenEV3/' + n); }
+    },
+  });
 })();
