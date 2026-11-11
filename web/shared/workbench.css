@@ -88,6 +88,8 @@ code, .mono { font-family: var(--mono); }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
 .panel > h3 { margin-bottom: 10px; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* A row holding labelled fields: line buttons up with the inputs, under the labels. */
+.row:has(> label.f) { align-items: flex-end; }
 .row.tight { gap: 6px; }
 .stack { display: flex; flex-direction: column; gap: 8px; }
 label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); min-width: 0; }
