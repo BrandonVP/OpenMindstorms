@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenRCX Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a bench. Top strip = brick vitals, left rail = workstations, main = the bench surface.
+   Colour: cool slate neutrals so the RCX yellow and the grey-green LCD read as the only warm things. */
+:root {
+  --bg: #e9ecf0;          /* bench */
+  --surface: #ffffff;     /* panels */
+  --surface-2: #f4f6f8;   /* inset wells */
+  --ink: #18212b;
+  --muted: #5e6b7a;
+  --line: #cfd6de;
+  --accent: #f5b800;      /* RCX yellow */
+  --accent-ink: #2b2000;
+  --accent-soft: #fff1bf;
+  --lcd: #c8d2b6;         /* RCX LCD glass */
+  --lcd-ink: #1f2a1a;
+  --good: #1f8a4c;
+  --warn: #c7760a;
+  --bad: #c0392b;
+  --focus: #1d6fd1;
+  --display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+  --radius: 6px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161b; --surface: #1b2129; --surface-2: #232b35; --ink: #e5e9ee; --muted: #98a4b2;
+    --line: #313b47; --accent: #f5b800; --accent-ink: #2b2000; --accent-soft: #3d3300;
+    --lcd: #2a3324; --lcd-ink: #cfe3b8; --good: #3ccf7a; --warn: #f2a93b; --bad: #ff6b5b; --focus: #6aa7ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161b; --surface: #1b2129; --surface-2: #232b35; --ink: #e5e9ee; --muted: #98a4b2;
+  --line: #313b47; --accent: #f5b800; --accent-ink: #2b2000; --accent-soft: #3d3300;
+  --lcd: #2a3324; --lcd-ink: #cfe3b8; --good: #3ccf7a; --warn: #f2a93b; --bad: #ff6b5b; --focus: #6aa7ff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); }
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: .01em; }
+h2 { font-size: 18px; font-weight: 600; }
+h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+code, .mono { font-family: var(--mono); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+.topbar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 18px; }
+.brand .brick { width: 26px; height: 18px; background: var(--accent); border-radius: 3px; position: relative; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+.brand .brick::after { content: ""; position: absolute; left: 6px; top: 4px; width: 14px; height: 7px; background: var(--lcd); border-radius: 1px; }
+.vitals { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-left: auto; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.pill.on .dot { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
+.pill.err .dot { background: var(--bad); }
+.pill.busy .dot { background: var(--accent); animation: blink .6s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .pill.busy .dot { animation: none; } }
+
+.shell { display: grid; grid-template-columns: 200px 1fr; min-height: 0; }
+.rail { background: var(--surface); border-right: 1px solid var(--line); padding-block: 12px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: 12px; display: flex; flex-direction: column; gap: 4px; }
+.rail button { text-align: left; background: none; border: 0; padding: 9px 12px; border-radius: var(--radius); font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--muted); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.rail button:hover { background: var(--surface-2); color: var(--ink); }
+.rail button.active { background: var(--accent); color: var(--accent-ink); }
+.rail button .k { font: 11px var(--mono); opacity: .55; }
+.rail .spacer { flex: 1; }
+.rail .foot { font-size: 11.5px; color: var(--muted); padding: 8px 12px; line-height: 1.4; }
+.main { overflow: auto; padding-block: 18px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.view { display: none; max-width: 1100px; }
+.view.active { display: block; }
+.view > header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.view > header p { margin: 0; color: var(--muted); }
+
+.grid { display: grid; gap: 14px; }
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid.three { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
+.panel > h3 { margin-bottom: 10px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row.tight { gap: 6px; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); min-width: 0; }
+label.f > span { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+input[type=text], input[type=number], select, textarea {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; color: var(--ink); min-width: 0;
+}
+input[type=number] { width: 7em; font-variant-numeric: tabular-nums; }
+select { padding-right: 24px; }
+.btn { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 12px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-family: var(--display); font-weight: 700; letter-spacing: .02em; }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+.btn.sm { padding: 4px 9px; font-size: 12.5px; }
+.btn.run { background: var(--good); color: #fff; border-color: transparent; }
+.btn.stop { background: var(--bad); color: #fff; border-color: transparent; }
+.btn.icon { width: 36px; padding: 7px 0; text-align: center; font-family: var(--mono); }
+fieldset { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; min-width: 0; margin: 0; }
+legend { font-family: var(--display); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 0 6px; }
+.choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; background: var(--surface-2); }
+.choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.choice input { margin-top: 3px; }
+.choice b { font-family: var(--display); }
+.choice small { display: block; color: var(--muted); }
+.choice.disabled { opacity: .5; cursor: not-allowed; }
+
+.lcd { background: var(--lcd); color: var(--lcd-ink); font-family: var(--mono); border-radius: 4px; padding: 6px 10px; font-size: 22px; font-weight: 500; letter-spacing: .06em; font-variant-numeric: tabular-nums; text-align: right; box-shadow: inset 0 2px 6px rgba(0,0,0,.18); min-width: 6ch; }
+.lcd small { font-size: 11px; letter-spacing: .1em; display: block; text-align: left; opacity: .7; font-family: var(--display); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 13.5px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.progress { height: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: var(--accent); transition: width .15s linear; }
+.progress-text { font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-left: auto; }
+.seg button { background: var(--surface); border: 0; padding: 6px 14px; cursor: pointer; font-family: var(--display); font-weight: 600; color: var(--muted); }
+.seg button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+.blockly-host { height: 540px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface-2); }
+.gen { margin-top: 8px; }
+.gen summary { cursor: pointer; font-family: var(--display); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.gen pre { margin-top: 6px; max-height: 260px; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; }
+.api { display: grid; grid-template-rows: auto 1fr; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); height: 420px; min-width: 0; overflow: hidden; }
+.api-head { display: grid; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); }
+.api-head input { width: 100%; }
+.api-list { overflow: auto; font-size: 12.5px; }
+.api-list h4 { margin: 0; padding: 8px 10px 4px; font-family: var(--display); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); position: sticky; top: 0; background: var(--surface); }
+.api-list button { display: block; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid transparent; padding: 5px 10px; cursor: pointer; color: var(--ink); }
+.api-list button:hover, .api-list button:focus-visible { background: var(--accent-soft); outline: none; }
+.api-list button b { font-family: var(--mono); font-weight: 500; display: block; }
+.api-list button span { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.api-list .none { padding: 12px; color: var(--muted); }
+.editor { display: grid; grid-template-columns: auto 1fr; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); overflow: hidden; height: 420px; min-width: 0; }
+.editor .gutter { font-family: var(--mono); font-size: 13px; line-height: 1.45; color: var(--muted); padding: 10px 8px; text-align: right; user-select: none; overflow: hidden; border-right: 1px solid var(--line); white-space: pre; }
+.editor .gutter .err { color: var(--bad); font-weight: 600; }
+.editor textarea { border: 0; border-radius: 0; resize: none; font-family: var(--mono); font-size: 13px; line-height: 1.45; padding: 10px; white-space: pre; overflow: auto; tab-size: 4; background: transparent; }
+.editor textarea:focus { outline: none; }
+.out { font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; max-height: 180px; overflow: auto; margin: 0; }
+.out .e { color: var(--bad); } .out .ok { color: var(--good); }
+
+.motor { display: grid; gap: 8px; }
+.motor .name { font-family: var(--display); font-size: 26px; font-weight: 700; line-height: 1; }
+.motor input[type=range] { width: 100%; accent-color: var(--accent); }
+.motor .state { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.sensor { display: grid; gap: 8px; }
+.sounds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th { font-family: var(--display); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.tablewrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+
+.console { font-family: var(--mono); font-size: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; height: 360px; overflow: auto; white-space: pre; }
+.console .tx { color: var(--focus); } .console .rx { color: var(--good); } .console .note { color: var(--muted); } .console .err { color: var(--bad); }
+
+.banner { padding: 10px 12px; border-radius: var(--radius); border: 1px solid; margin-bottom: 14px; }
+.banner.warn { background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.banner.bad { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+.toasts { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; z-index: 20; max-width: min(420px, 90vw); }
+.toast { background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: var(--radius); box-shadow: 0 6px 20px rgba(0,0,0,.25); font-size: 13.5px; }
+.toast.bad { background: var(--bad); color: #fff; } .toast.good { background: var(--good); color: #fff; }
+.muted { color: var(--muted); } .small { font-size: 12.5px; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+.sim-only { display: none; } body.sim .sim-only { display: block; }
+.disconnected .needs-link { opacity: .5; pointer-events: none; }
+
+@media (max-width: 760px) {
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .rail { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding-block: 6px; }
+  .rail .spacer, .rail .foot { display: none; }
+  .rail button { white-space: nowrap; }
+  .editor { height: 300px; }
+  .blockly-host { height: 420px; }
+  .workspace { grid-template-columns: 1fr; }
+  .api { height: 260px; }
+}
+</style>
+</head>
+<body class="disconnected">
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><span class="brick" aria-hidden="true"></span> OpenRCX Workbench</div>
+    <div class="vitals">
+      <span class="pill" id="pillLink"><span class="dot"></span><span id="linkText">Not connected</span></span>
+      <span class="pill" id="pillFw" hidden>ROM <span id="romText" class="mono">-</span> · FW <span id="fwText" class="mono">-</span></span>
+      <span class="pill" id="pillBatt" hidden>🔋 <span id="battText" class="mono">-</span></span>
+      <button class="btn sm" id="btnRefresh" hidden>Refresh</button>
+      <button class="btn sm" id="btnDisconnect" hidden>Disconnect</button>
+    </div>
+  </div>
+
+  <div class="shell">
+    <nav class="rail" aria-label="Sections">
+      <button data-view="connect" class="active">Connect <span class="k">1</span></button>
+      <button data-view="program">Program <span class="k">2</span></button>
+      <button data-view="control">Control <span class="k">3</span></button>
+      <button data-view="firmware">Firmware <span class="k">4</span></button>
+      <button data-view="datalog">Datalog <span class="k">5</span></button>
+      <button data-view="console">Console <span class="k">6</span></button>
+      <div class="spacer"></div>
+      <div class="foot">LEGO Mindstorms RCX · 2400 baud · odd parity · 38 kHz IR<br>Compiler: NQC 3.1 r6 (WebNQC)</div>
+    </nav>
+
+    <main class="main">
+      <!-- ============================================================ CONNECT -->
+      <section class="view active" id="view-connect">
+        <header><h2>Connect to the brick</h2><p>Pick the tower you are using, then connect. Chrome or Edge is required for the COM port and USB options.</p></header>
+        <div id="noSerial" class="banner bad" hidden>This browser has no Web Serial support. Open this page in <b>Chrome</b> or <b>Edge</b>, or use the simulator below.</div>
+        <div class="grid two">
+          <div class="panel">
+            <h3>Tower</h3>
+            <div class="stack" id="towerChoices">
+              <label class="choice"><input type="radio" name="tower" value="diy" checked><span><b>OpenRCX DIY tower</b><small>Teensy / ESP32 board on a USB COM port. No echo.</small></span></label>
+              <label class="choice"><input type="radio" name="tower" value="serial"><span><b>LEGO serial tower (9713)</b><small>RS-232 tower on a COM port or USB-serial adapter, 9 V battery inside. Echo expected.</small></span></label>
+              <label class="choice"><input type="radio" name="tower" value="usb"><span><b>LEGO USB tower</b><small>From Robotics Invention System 2.0. Needs the WinUSB driver (Zadig) instead of LEGO's. Untested.</small></span></label>
+              <label class="choice"><input type="radio" name="tower" value="sim"><span><b>Simulator</b><small>A software RCX inside this page. Try everything with no hardware.</small></span></label>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <button class="btn primary" id="btnConnect">Connect</button>
+              <label class="f" id="usbRangeWrap" hidden><span>USB tower range</span><select id="usbRange"><option>short</option><option selected>medium</option><option>long</option></select></label>
+            </div>
+            <p class="hint">Connecting opens the browser's port picker. Put the brick 5–50 cm in front of the tower, switched on, out of direct sunlight.</p>
+          </div>
+          <div class="panel">
+            <h3>Brick</h3>
+            <dl class="kv">
+              <dt>Link</dt><dd id="infoLink">-</dd>
+              <dt>ROM</dt><dd id="infoRom">-</dd>
+              <dt>Firmware</dt><dd id="infoFw">-</dd>
+              <dt>Battery</dt><dd id="infoBatt">-</dd>
+              <dt>Program slot</dt><dd id="infoProg">-</dd>
+              <dt>Free memory</dt><dd id="infoMem">-</dd>
+              <dt>Packets</dt><dd id="infoStats">-</dd>
+            </dl>
+            <div class="row" style="margin-top:12px">
+              <button class="btn needs-link" id="btnPing">Ping</button>
+              <button class="btn needs-link" id="btnBeep">Beep</button>
+              <button class="btn needs-link" id="btnSelfTest">Self test</button>
+            </div>
+            <p class="hint">Self test: beep, cycle the display through the sensors and motors, and read everything back.</p>
+          </div>
+          <div class="panel sim-only">
+            <h3>Simulated sensors</h3>
+            <p class="small muted">Drag to feed values to the simulated brick's sensor ports.</p>
+            <div class="stack">
+              <label class="f"><span>Port 1 <span id="simS1v" class="mono">0</span></span><input type="range" min="0" max="100" value="0" id="simS1"></label>
+              <label class="f"><span>Port 2 <span id="simS2v" class="mono">0</span></span><input type="range" min="0" max="100" value="0" id="simS2"></label>
+              <label class="f"><span>Port 3 <span id="simS3v" class="mono">0</span></span><input type="range" min="0" max="100" value="0" id="simS3"></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ PROGRAM -->
+      <section class="view" id="view-program">
+        <header><h2>Program</h2><p>Build it from blocks or write NQC, compile in the browser, download to a slot, press Run.</p>
+          <div class="seg" role="tablist" aria-label="Editor mode"><button role="tab" data-mode="blocks" aria-selected="false">Blocks</button><button role="tab" data-mode="text" aria-selected="true">NQC text</button></div></header>
+        <div class="row mode-blocks" style="margin-bottom:10px" hidden>
+          <label class="f"><span>Examples</span><select id="blockExampleSel"><option value="">Choose…</option></select></label>
+          <button class="btn" id="btnBlocksNew">New</button>
+          <button class="btn" id="btnOpenBlocks">Open blocks…</button>
+          <button class="btn" id="btnSaveBlocks">Save blocks</button>
+          <input type="file" id="fileBlocks" accept=".json,.rcxblocks" hidden>
+          <button class="btn" id="btnBlocksToText" title="Copy the generated NQC into the text editor">Send to NQC text</button>
+          <span style="flex:1"></span>
+          <button class="btn primary" id="btnCompileBlocks">Compile</button>
+          <label class="f"><span>Slot</span><select id="slotSelBlocks"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option><option value="4">5</option></select></label>
+          <button class="btn needs-link" id="btnDownloadBlocks">Download</button>
+          <button class="btn run needs-link" id="btnRunBlocks">Run</button>
+          <button class="btn stop needs-link" id="btnStopBlocks">Stop</button>
+        </div>
+        <div class="mode-blocks" hidden>
+          <div id="blocklyDiv" class="blockly-host"></div>
+          <details class="gen" id="genDetails"><summary>Generated NQC</summary><pre class="out" id="genCode"></pre></details>
+        </div>
+        <div class="row mode-text" style="margin-bottom:10px">
+          <label class="f"><span>Examples</span><select id="exampleSel"><option value="">Choose…</option></select></label>
+          <button class="btn" id="btnOpenSrc">Open .nqc</button>
+          <button class="btn" id="btnSaveSrc">Save .nqc</button>
+          <input type="file" id="fileSrc" accept=".nqc,.c,.txt" hidden>
+          <span style="flex:1"></span>
+          <button class="btn primary" id="btnCompile">Compile</button>
+          <label class="f"><span>Slot</span><select id="slotSel"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option><option value="4">5</option></select></label>
+          <button class="btn needs-link" id="btnDownload" disabled>Download</button>
+          <button class="btn run needs-link" id="btnRun">Run</button>
+          <button class="btn stop needs-link" id="btnStopProg">Stop</button>
+        </div>
+        <div class="workspace mode-text">
+          <div class="editor"><div class="gutter" id="gutter">1</div><textarea id="src" spellcheck="false" aria-label="NQC source"></textarea></div>
+          <aside class="api" aria-label="NQC API reference">
+            <div class="api-head">
+              <input type="search" id="apiSearch" placeholder="Search the NQC API… (click to insert)" aria-label="Search API">
+              <a class="small" href="../docs/NQC_Programmers_Guide.pdf" target="_blank" rel="noopener">Full guide (PDF)</a>
+            </div>
+            <div class="api-list" id="apiList"></div>
+          </aside>
+        </div>
+        <div class="row" style="margin:10px 0 6px">
+          <h3 style="margin:0">Compiler output</h3>
+          <span class="small muted" id="imgSummary"></span>
+          <span style="flex:1"></span>
+          <button class="btn sm" id="btnOpenRcx">Open compiled .rcx…</button>
+          <input type="file" id="fileRcx" accept=".rcx" hidden>
+          <button class="btn sm" id="btnSaveRcx" disabled>Save .rcx</button>
+        </div>
+        <pre class="out" id="compileOut">Press Compile.</pre>
+        <div class="row" style="margin-top:8px"><div class="progress" style="flex:1"><div id="progProgram"></div></div><span class="progress-text" id="progProgramText"></span></div>
+      </section>
+
+      <!-- ============================================================ CONTROL -->
+      <section class="view" id="view-control">
+        <header><h2>Control</h2><p>Direct commands. These need firmware on the brick and work while a program runs.</p></header>
+        <div class="grid three needs-link">
+          <div class="panel motor" data-motor="A"><div class="row"><span class="name">A</span><span class="state" data-state>off · power 7 · fwd</span></div>
+            <div class="row tight"><button class="btn icon" data-dir="rev" title="Reverse">◀</button><button class="btn icon" data-dir="fwd" title="Forward">▶</button><button class="btn icon" data-dir="flip" title="Flip">⇄</button><span style="flex:1"></span><button class="btn sm run" data-m="on">On</button><button class="btn sm" data-m="float">Float</button><button class="btn sm stop" data-m="off">Off</button></div>
+            <label class="f"><span>Power <span data-pv class="mono">7</span></span><input type="range" min="0" max="7" value="7" data-power></label></div>
+          <div class="panel motor" data-motor="B"><div class="row"><span class="name">B</span><span class="state" data-state>off · power 7 · fwd</span></div>
+            <div class="row tight"><button class="btn icon" data-dir="rev" title="Reverse">◀</button><button class="btn icon" data-dir="fwd" title="Forward">▶</button><button class="btn icon" data-dir="flip" title="Flip">⇄</button><span style="flex:1"></span><button class="btn sm run" data-m="on">On</button><button class="btn sm" data-m="float">Float</button><button class="btn sm stop" data-m="off">Off</button></div>
+            <label class="f"><span>Power <span data-pv class="mono">7</span></span><input type="range" min="0" max="7" value="7" data-power></label></div>
+          <div class="panel motor" data-motor="C"><div class="row"><span class="name">C</span><span class="state" data-state>off · power 7 · fwd</span></div>
+            <div class="row tight"><button class="btn icon" data-dir="rev" title="Reverse">◀</button><button class="btn icon" data-dir="fwd" title="Forward">▶</button><button class="btn icon" data-dir="flip" title="Flip">⇄</button><span style="flex:1"></span><button class="btn sm run" data-m="on">On</button><button class="btn sm" data-m="float">Float</button><button class="btn sm stop" data-m="off">Off</button></div>
+            <label class="f"><span>Power <span data-pv class="mono">7</span></span><input type="range" min="0" max="7" value="7" data-power></label></div>
+        </div>
+        <div class="row needs-link" style="margin:10px 0 14px"><button class="btn stop" id="btnAllOff">All motors off</button><button class="btn" id="btnAllFloat">All float</button></div>
+
+        <div class="grid three needs-link">
+          <div class="panel sensor" data-sensor="0"><div class="row"><h3 style="margin:0">Sensor 1</h3><span style="flex:1"></span><div class="lcd" data-lcd><small>VALUE</small>—</div></div>
+            <div class="row"><select data-type><option value="none">none</option><option value="touch">touch</option><option value="light">light</option><option value="rotation">rotation</option><option value="temperature">temperature</option></select><select data-mode><option value="">default mode</option><option value="raw">raw</option><option value="bool">bool</option><option value="edge">edge</option><option value="pulse">pulse</option><option value="percent">percent</option><option value="celsius">celsius</option><option value="fahrenheit">fahrenheit</option><option value="rotation">rotation</option></select><button class="btn sm" data-apply>Apply</button><button class="btn sm" data-clear>Clear</button></div></div>
+          <div class="panel sensor" data-sensor="1"><div class="row"><h3 style="margin:0">Sensor 2</h3><span style="flex:1"></span><div class="lcd" data-lcd><small>VALUE</small>—</div></div>
+            <div class="row"><select data-type><option value="none">none</option><option value="touch">touch</option><option value="light">light</option><option value="rotation">rotation</option><option value="temperature">temperature</option></select><select data-mode><option value="">default mode</option><option value="raw">raw</option><option value="bool">bool</option><option value="edge">edge</option><option value="pulse">pulse</option><option value="percent">percent</option><option value="celsius">celsius</option><option value="fahrenheit">fahrenheit</option><option value="rotation">rotation</option></select><button class="btn sm" data-apply>Apply</button><button class="btn sm" data-clear>Clear</button></div></div>
+          <div class="panel sensor" data-sensor="2"><div class="row"><h3 style="margin:0">Sensor 3</h3><span style="flex:1"></span><div class="lcd" data-lcd><small>VALUE</small>—</div></div>
+            <div class="row"><select data-type><option value="none">none</option><option value="touch">touch</option><option value="light">light</option><option value="rotation">rotation</option><option value="temperature">temperature</option></select><select data-mode><option value="">default mode</option><option value="raw">raw</option><option value="bool">bool</option><option value="edge">edge</option><option value="pulse">pulse</option><option value="percent">percent</option><option value="celsius">celsius</option><option value="fahrenheit">fahrenheit</option><option value="rotation">rotation</option></select><button class="btn sm" data-apply>Apply</button><button class="btn sm" data-clear>Clear</button></div></div>
+        </div>
+        <div class="row needs-link" style="margin:10px 0 14px"><label class="row"><input type="checkbox" id="pollSensors"> Live sensor readout</label><label class="f"><span>every</span><select id="pollInterval"><option value="250">250 ms</option><option value="500" selected>500 ms</option><option value="1000">1 s</option></select></label><button class="btn sm" id="btnReadOnce">Read once</button></div>
+
+        <div class="grid three needs-link">
+          <div class="panel"><h3>Sounds</h3><div class="sounds" id="soundBtns"></div>
+            <div class="row" style="margin-top:10px"><label class="f"><span>Tone Hz</span><input type="number" id="toneHz" value="440" min="31" max="20000"></label><label class="f"><span>ms</span><input type="number" id="toneMs" value="300" min="10" max="2550" step="10"></label><button class="btn" id="btnTone" style="align-self:flex-end">Play tone</button></div></div>
+          <div class="panel"><h3>Program &amp; display</h3>
+            <div class="row"><label class="f"><span>Slot</span><select id="ctlSlot"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option><option value="4">5</option></select></label><button class="btn sm" id="btnSelectSlot" style="align-self:flex-end">Select</button><button class="btn sm run" id="btnCtlRun" style="align-self:flex-end">Run</button><button class="btn sm stop" id="btnCtlStop" style="align-self:flex-end">Stop all</button></div>
+            <div class="row" style="margin-top:10px"><label class="f"><span>LCD shows</span><select id="dispSel"><option value="0">watch</option><option value="1">sensor 1</option><option value="2">sensor 2</option><option value="3">sensor 3</option><option value="4">motor A</option><option value="5">motor B</option><option value="6">motor C</option></select></label><button class="btn sm" id="btnDisp" style="align-self:flex-end">Set</button></div>
+            <div class="row" style="margin-top:10px"><button class="btn sm" id="btnClock">Set clock to now</button><button class="btn sm" id="btnRangeNear">IR near</button><button class="btn sm" id="btnRangeFar">IR far</button></div></div>
+          <div class="panel"><h3>Variables &amp; message</h3>
+            <div class="row"><label class="f"><span>Var</span><input type="number" id="varIdx" value="0" min="0" max="31"></label><label class="f"><span>Value</span><input type="number" id="varVal" value="0" min="-32768" max="32767"></label><button class="btn sm" id="btnVarSet" style="align-self:flex-end">Set</button><button class="btn sm" id="btnVarGet" style="align-self:flex-end">Get</button></div>
+            <div class="row" style="margin-top:10px"><label class="f"><span>IR message</span><input type="number" id="msgVal" value="1" min="0" max="255"></label><button class="btn sm" id="btnMsgSend" style="align-self:flex-end">Send</button><button class="btn sm" id="btnMsgRead" style="align-self:flex-end">Read</button><span class="mono small" id="msgOut"></span></div>
+            <div class="row" style="margin-top:10px"><label class="f"><span>Auto power-off (min, 0 = never)</span><input type="number" id="sleepMin" value="15" min="0" max="255"></label><button class="btn sm" id="btnSleep" style="align-self:flex-end">Set</button><button class="btn sm danger" id="btnOff" style="align-self:flex-end">Power off</button></div></div>
+        </div>
+      </section>
+
+      <!-- ============================================================ FIRMWARE -->
+      <section class="view" id="view-firmware">
+        <header><h2>Firmware</h2><p>The RCX forgets its firmware when the batteries are out. Loading takes about four minutes at 2400 baud.</p></header>
+        <div class="grid two">
+          <div class="panel">
+            <h3>Image</h3>
+            <div class="stack">
+              <label class="f"><span>Bundled</span><select id="fwSel"></select></label>
+              <div class="row"><button class="btn" id="btnOpenLgo">Open .lgo file…</button><input type="file" id="fileLgo" accept=".lgo,.srec,.s19" hidden><span class="small muted" id="fwFileName"></span></div>
+              <dl class="kv"><dt>Title</dt><dd id="fwTitle">-</dd><dt>Size</dt><dd id="fwSize">-</dd><dt>Load address</dt><dd id="fwStart">-</dd><dt>Checksum</dt><dd id="fwCk">-</dd></dl>
+            </div>
+          </div>
+          <div class="panel needs-link">
+            <h3>Install</h3>
+            <p class="small">Keep the tower pointed at the brick and shade both from bright light for the whole transfer. Programs on the brick are erased.</p>
+            <label class="row"><input type="checkbox" id="fwConfirm"> I understand, go ahead</label>
+            <div class="row" style="margin-top:10px"><button class="btn primary" id="btnInstallFw" disabled>Install firmware</button><button class="btn danger" id="btnDeleteFw">Delete firmware</button></div>
+            <div class="row" style="margin-top:12px"><div class="progress" style="flex:1"><div id="progFw"></div></div><span class="progress-text" id="progFwText"></span></div>
+            <p class="hint" id="fwStatus"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ DATALOG -->
+      <section class="view" id="view-datalog">
+        <header><h2>Datalog</h2><p>Values a program stored with AddToDatalog(). Upload them here and save as CSV.</p></header>
+        <div class="row needs-link" style="margin-bottom:10px"><button class="btn primary" id="btnDlUpload">Upload</button><button class="btn" id="btnDlCsv" disabled>Save CSV</button><label class="f"><span>New log size</span><input type="number" id="dlSize" value="100" min="1" max="2000"></label><button class="btn" id="btnDlCreate" style="align-self:flex-end">Create / clear</button><span class="small muted" id="dlInfo"></span></div>
+        <div class="panel tablewrap"><table id="dlTable"><thead><tr><th>#</th><th>Source</th><th>Value</th></tr></thead><tbody><tr><td colspan="3" class="muted">Nothing uploaded yet.</td></tr></tbody></table></div>
+      </section>
+
+      <!-- ============================================================ CONSOLE -->
+      <section class="view" id="view-console">
+        <header><h2>Console</h2><p>Every packet on the IR link, and a way to send any opcode by hand.</p></header>
+        <div class="row needs-link" style="margin-bottom:10px"><label class="f" style="flex:1"><span>Raw command (hex bytes: opcode then arguments)</span><input type="text" id="rawHex" class="mono" placeholder="51 03" value="51 03"></label><label class="f"><span>Expect reply bytes</span><input type="number" id="rawExpect" placeholder="auto" min="0" max="255"></label><button class="btn primary" id="btnRaw" style="align-self:flex-end">Send</button></div>
+        <div class="row" style="margin-bottom:6px"><span class="small muted" id="conStats">0 packets</span><span style="flex:1"></span><label class="row small"><input type="checkbox" id="conAuto" checked> autoscroll</label><button class="btn sm" id="btnConCopy">Copy</button><button class="btn sm" id="btnConClear">Clear</button></div>
+        <div class="console" id="con"></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script src="js/protocol.js"></script>
+<script src="js/transports.js"></script>
+<script src="js/rcx.js"></script>
+<script src="js/sim.js"></script>
+<script src="data/firmware.js"></script>
+<script src="data/examples.js"></script>
+<script src="data/nqc_api.js"></script>
+<script src="vendor/webnqc/nqc.js"></script>
+<script src="vendor/blockly/blockly.min.js"></script>
+<script src="js/blocks.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

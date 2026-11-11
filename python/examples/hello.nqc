@@ -1,0 +1,18 @@
+// OpenRCX example - compile and download with:
+//     rcx run python/examples/hello.nqc
+//
+// Beeps, then drives motor A forward until the touch sensor on port 1 is
+// pressed, then backs up for a second and stops.
+
+task main()
+{
+    SetSensor(SENSOR_1, SENSOR_TOUCH);
+    PlaySound(SOUND_UP);
+    SetPower(OUT_A, OUT_FULL);
+    OnFwd(OUT_A);
+    until (SENSOR_1 == 1);
+    OnRev(OUT_A);
+    Wait(100);
+    Off(OUT_A);
+    PlaySound(SOUND_DOUBLE_BEEP);
+}

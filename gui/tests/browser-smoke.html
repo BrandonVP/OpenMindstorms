@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>OpenRCX browser smoke test</title></head>
+<body>
+<pre id="out">running…</pre>
+<script src="../js/protocol.js"></script>
+<script src="../js/transports.js"></script>
+<script src="../js/rcx.js"></script>
+<script src="../js/sim.js"></script>
+<script src="../data/firmware.js"></script>
+<script src="../data/examples.js"></script>
+<script src="../vendor/webnqc/nqc.js"></script>
+<script>
+(async () => {
+  const out = [];
+  const say = t => { out.push(t); document.getElementById('out').textContent = out.join('\n'); };
+  try {
+    const P = OpenRCX.protocol, L = OpenRCX.link, S = OpenRCX.sim;
+    const errs = [];
+    const nqc = await createWebNqc({ noInitialRun: true, print: t => errs.push(t), printErr: t => errs.push(t) });
+    nqc.FS.writeFile('input.nqc', OpenRCX.examples[1].source + '\n');
+    let rv; try { rv = nqc.callMain(['-Trcx2', '-Ooutput.rcx', 'input.nqc']); } catch (e) { rv = e.name === 'ExitStatus' ? e.status : -1; say('callMain threw ' + e.name + ' ' + e.message); }
+    say('nqc exit ' + rv + ' ' + errs.join(' | '));
+    if (rv !== 0) throw new Error('compile failed');
+    const bytes = nqc.FS.readFile('output.rcx');
+    const img = P.parseRcx(bytes);
+    say('image: ' + P.describeImage(img));
+    // a second, failing compile on a fresh instance reports a line number
+    const errs2 = [];
+    const nqc2 = await createWebNqc({ noInitialRun: true, print: t => errs2.push(t), printErr: t => errs2.push(t) });
+    nqc2.FS.writeFile('input.nqc', 'task main()\n{\n    Onfwd(OUT_A);\n}\n');
+    let rv2; try { rv2 = nqc2.callMain(['-Trcx2', '-Ooutput.rcx', 'input.nqc']); } catch (e) { rv2 = e.name === 'ExitStatus' ? e.status : -1; }
+    say('bad compile exit ' + rv2 + ' :: ' + errs2.join(' | '));
+    // download into the simulator
+    const t = new S.SimTransport({ firmware: true });
+    const rcx = new L.RCX(new L.RcxLink(t));
+    await rcx.downloadProgram(img, 1);
+    say('downloaded to sim slot 2: ' + Object.keys(t.rcx.programs[1]).join(',') + ' bytes=' + Object.values(t.rcx.programs[1]).reduce((a, d) => a + d.length, 0));
+    const blank = new L.RCX(new L.RcxLink(new S.SimTransport({ firmware: false })));
+    const fw = P.parseSrec(OpenRCX.firmwareImages.firm0328.text);
+    await blank.downloadFirmware(fw);
+    say('firmware installed in sim: ' + (await blank.versions()).firmwareText);
+    say('SMOKE OK');
+  } catch (e) { say('SMOKE FAIL ' + (e.stack || e)); }
+})();
+</script>
+</body></html>

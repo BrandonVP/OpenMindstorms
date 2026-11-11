@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>WebNQC command-line compile</title></head>
+<body>
+<p>Compiles the NQC source given URL-encoded after <code>#</code> and prints the .rcx bytes as hex.
+Used by headless-browser tooling; nothing to see here otherwise.</p>
+<pre id="out"></pre>
+<script src="../vendor/webnqc/nqc.js"></script>
+<script>
+(async () => {
+  const out = document.getElementById('out');
+  const say = t => { out.textContent += t + '\n'; };
+  try {
+    const src = decodeURIComponent(location.hash.slice(1));
+    if (!src) { say('EXIT no source in URL hash'); return; }
+    const nqc = await createWebNqc({ noInitialRun: true, print: t => say('OUT ' + t), printErr: t => say('ERR ' + t) });
+    nqc.FS.writeFile('input.nqc', src + '\n');
+    let rv;
+    try { rv = nqc.callMain(['-Trcx2', '-Ooutput.rcx', 'input.nqc']); }
+    catch (e) { rv = (e && e.name === 'ExitStatus') ? e.status : -1; }
+    if (rv === 0) {
+      const b = nqc.FS.readFile('output.rcx');
+      say('HEX ' + Array.from(b, x => x.toString(16).padStart(2, '0')).join(''));
+    } else say('EXIT ' + rv);
+  } catch (e) { say('FAIL ' + (e.stack || e)); }
+})();
+</script>
+</body></html>

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+
+# NQC output
+*.rcx
+!python/tests/data/*.rcx
+
+# Visual Micro / Visual Studio / Arduino build artifacts
+__vm/
+.vs/
+*.vsarduino.h
+VMBuilds/
+Debug/
+Release/
+*.user
+*.suo
+tower/**/build/
