@@ -13,6 +13,16 @@ class TransportError(Exception):
     pass
 
 
+def _libusb_backend():
+    """pyusb needs a libusb-1.0 library.  Windows has none by default; the
+    ``libusb-package`` wheel bundles one, so prefer it when installed."""
+    try:
+        import libusb_package
+        return libusb_package.get_libusb1_backend()
+    except Exception:
+        return None
+
+
 class Transport:
     name = "transport"
 
@@ -48,7 +58,7 @@ class UsbTransport(Transport):
         except ImportError as e:  # pragma: no cover
             raise TransportError("pyusb is not installed (pip install pyusb)") from e
         self._usb = usb
-        dev = usb.core.find(idVendor=P.USB_VID, idProduct=P.USB_PID)
+        dev = usb.core.find(idVendor=P.USB_VID, idProduct=P.USB_PID, backend=_libusb_backend())
         if dev is None:
             raise TransportError(
                 "no NXT found on USB (ID 0694:0002). Is it switched on and plugged in, and on "

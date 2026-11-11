@@ -262,7 +262,13 @@ class UsbTowerTransport(Transport):
         except ImportError as e:  # pragma: no cover
             raise TransportError("pyusb is not installed (pip install pyusb)") from e
         self._usb = usb
-        dev = usb.core.find(idVendor=LEGO_USB_VID, idProduct=LEGO_USB_TOWER_PID)
+        backend = None
+        try:
+            import libusb_package   # bundles libusb-1.0 for Windows
+            backend = libusb_package.get_libusb1_backend()
+        except Exception:
+            pass
+        dev = usb.core.find(idVendor=LEGO_USB_VID, idProduct=LEGO_USB_TOWER_PID, backend=backend)
         if dev is None:
             raise TransportError(
                 "LEGO USB tower not found (VID 0694 PID 0001). On Windows the tower "

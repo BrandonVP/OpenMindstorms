@@ -284,6 +284,13 @@ def main(argv=None) -> int:
         return 1
     except KeyboardInterrupt:
         return 130
+    except Exception as e:  # serial/usb layer surprises: say what happened, no traceback
+        hint = ""
+        if args.port and args.port.upper().startswith("COM"):
+            hint = (" A paired NXT shows two COM ports; use the one marked 'outgoing' in "
+                    "Device Manager, and make sure the Workbench is not holding it open.")
+        print(f"error: {type(e).__name__}: {e}.{hint}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

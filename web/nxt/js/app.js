@@ -191,10 +191,14 @@
   function progressUI(barId, textId, label) { const t0 = Date.now(); return (done, total) => { const pct = Math.round(100 * done / Math.max(1, total)); $(barId).style.width = pct + '%'; const el = Date.now() - t0, rate = done / Math.max(el, 1) * 1000; $(textId).textContent = label + ' ' + pct + '%  ' + done + '/' + total + ' B' + (done < total ? '  ETA ' + Math.ceil((total - done) / Math.max(rate, 1)) + ' s' : '  done in ' + (el / 1000).toFixed(1) + ' s'); }; }
   async function uploadProgram() {
     if (!compiled) { if (!(await compile())) return false; }
-    const name = $('progName').value.trim();
+    const name = progName();
     if (!/^[^\\/:*?"<>|]{1,15}\.rxe$/i.test(name)) { toast('Name on brick must be up to 15 characters plus .rxe', 'bad'); return false; }
     $('progUpload').style.width = '0%';
-    return run('Uploading ' + name, async () => { await nxt.upload(name, compiled, progressUI('progUpload', 'progUploadText', name)); toast('Uploaded ' + name, 'good'); });
+    return run('Uploading ' + name, async () => {
+      await nxt.upload(name, compiled, progressUI('progUpload', 'progUploadText', name));
+      toast('Uploaded as ' + name + ' (' + compiled.length + ' bytes). Press Run here, or on the brick: My Files > Software files > ' + name.replace(/\.rxe$/i, ''), 'good', 8000);
+      try { files = await nxt.listFiles(); renderFiles(); } catch (e) { /* list later */ }
+    });
   }
   $('btnUpload').addEventListener('click', uploadProgram);
 
@@ -238,7 +242,7 @@
   $('btnUploadBlocks').addEventListener('click', async () => { if (await compileBlocks()) await uploadProgram(); });
   $('btnRunBlocks').addEventListener('click', () => run('Run', async () => { await nxt.startProgram(progName()); $('infoProg').textContent = progName(); toast('Running ' + progName(), 'good'); }));
   $('btnStopBlocks').addEventListener('click', () => run('Stop', async () => { await nxt.stopProgram(); await nxt.motorsStop(false); }));
-  $('btnRun').addEventListener('click', async () => { if (!nxt) { toast('Connect first.', 'bad'); return; } const name = $('progName').value.trim(); await run('Run', async () => { await nxt.startProgram(name); $('infoProg').textContent = name; }); });
+  $('btnRun').addEventListener('click', async () => { if (!nxt) { toast('Connect first.', 'bad'); return; } const name = progName(); await run('Run', async () => { await nxt.startProgram(name); $('infoProg').textContent = name; toast('Running ' + name, 'good'); }); });
   $('btnStopProg').addEventListener('click', () => run('Stop', async () => { await nxt.stopProgram(); await nxt.motorsStop(false); $('infoProg').textContent = '-'; }));
 
   /* ---------------------------------------------------------- control */
