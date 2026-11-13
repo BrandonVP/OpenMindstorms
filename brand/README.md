@@ -14,3 +14,10 @@ display face (embedded in the SVGs, so they render anywhere).
 `make_logo.py` regenerates the SVGs (it expects `cp.b64`, the base64 of the Chakra Petch
 700 Latin woff2 from Google Fonts, next to it). PNGs were rendered from the SVGs with
 headless Edge at 1:1.
+
+## Favicons
+
+`make_icons.py` writes the tab icons to `web/shared/icons/` (SVG, ICO with 16/32/48, 32 px and
+180 px PNG): `home` shows all three bricks, `rcx`, `nxt` and `ev3` each show their own brick so
+open Workbench tabs can be told apart. `web/favicon.ico` is a copy of `home.ico`. Run it with
+`--png <tmp dir>` to re-render the bitmaps (needs Pillow and Edge).
