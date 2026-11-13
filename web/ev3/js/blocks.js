@@ -137,7 +137,7 @@ var OpenEV3 = (typeof OpenEV3 !== 'undefined') ? OpenEV3 : {};
   /* ------------------------------------------------------------ generator */
   class Gen {
     constructor(globals) {
-      this.G = globals; this.a = new A.Asm(); this.loops = []; this.tmpBase = null; this.tmpTop = 0; this.subs = {}; this.depth = 0;
+      this.G = globals; this.a = new A.Asm(globals); this.loops = []; this.tmpBase = null; this.tmpTop = 0; this.subs = {}; this.depth = 0;
       this.scratch = this.G.alloc(4, 'scratch');           // TIMER_WAIT needs a 4-byte variable
       this.t8 = this.G.alloc(1, 't8');                     // byte scratch for int8 params
       this.t32 = this.G.alloc(4, 't32');                   // int32 scratch
@@ -357,11 +357,12 @@ var OpenEV3 = (typeof OpenEV3 !== 'undefined') ? OpenEV3 : {};
     for (const t of new Set(timerBlocks)) mainGen.a.emit('TIMER_READ', [GV(mainGen.timer(t))], 'timer ' + t + ' starts');
     beams.forEach((b, i) => mainGen.a.emit('OBJECT_START', [LC2(i + 2)], 'start beam ' + (i + 1)));
     for (const b of tops) if (b.type === 'ev3_program') mainGen.stmts(b, 'DO');
+    mainGen.a.emit('OBJECT_END', [], 'end of program');
     const mainCode = mainGen.a.finish();
-    const threadGens = beams.map(b => { const g = mkGen(); g.stmts(b, 'DO'); return g; });
-    const threads = [[Uint8Array.from([...mainCode, P.OP.OBJECT_END]), 0], ...threadGens.map(g => [Uint8Array.from([...g.a.finish(), P.OP.OBJECT_END]), 0])];
+    const threadGens = beams.map(b => { const g = mkGen(); g.stmts(b, 'DO'); g.a.emit('OBJECT_END', []); return g; });
+    const threads = [[mainCode, 0], ...threadGens.map(g => [g.a.finish(), 0])];
     const globals = G.aligned;
-    const listing = ['; main thread', mainGen.a.listing(), ...threadGens.map((g, i) => '; beam ' + (i + 1) + '\n' + g.a.listing()), '; globals: ' + globals + ' bytes (' + G.names.join(', ') + ')'].join('\n');
+    const listing = A.listing(G, [{ name: 'MAIN', asm: mainGen.a }, ...threadGens.map((g, i) => ({ name: 'BEAM' + (i + 1), asm: g.a }))]);
     return { main: mainCode, direct: mainCode, threads, globals, locals: 0, rbf: P.rbfImage(threads, globals), listing };
   }
 

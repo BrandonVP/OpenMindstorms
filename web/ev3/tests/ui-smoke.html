@@ -1,0 +1,42 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>OpenEV3 Program view smoke test</title></head>
+<body>
+<!-- Drives the real Workbench page in an iframe: switches editor modes, compiles EVC, shows an error,
+     sends the listing to the Assembly editor, assembles it, runs it on the simulator.
+     Run: msedge --headless=new --allow-file-access-from-files --virtual-time-budget=30000 --dump-dom web/ev3/tests/ui-smoke.html -->
+<pre id="out">running…</pre>
+<iframe id="f" src="../index.html#program" width="1300" height="900"></iframe>
+<script>
+const out = []; const say = t => { out.push(t); document.getElementById('out').textContent = out.join('\n'); };
+const f = document.getElementById('f');
+f.addEventListener('load', async () => {
+  try {
+    const d = f.contentDocument; const $ = id => d.getElementById(id);
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const pick = (sel, v) => { sel.value = v; sel.dispatchEvent(new Event('change')); };
+    await sleep(500);
+    say('modes: ' + [...d.querySelectorAll('.seg button')].map(b => b.dataset.mode).join(',') + ' pybricks mentions: ' + (d.body.innerHTML.match(/ybricks/g) || []).length);
+    d.querySelector('.seg button[data-mode=text]').click(); await sleep(100);
+    say('text editor shown: ' + !$('src').closest('.workspace').hidden + ', examples: ' + ($('exampleSel').options.length - 1) + ', api entries: ' + $('apiList').querySelectorAll('button').length);
+    pick($('exampleSel'), '1'); await sleep(50); $('btnBuild').click(); await sleep(50);
+    say('build example 2: ' + $('buildOut').textContent.trim() + ' | listing lines ' + $('genCode').textContent.split('\n').length + ' | name ' + $('progName').value);
+    $('src').value = 'task main() {\n  Foo(1);\n}'; $('src').dispatchEvent(new Event('input')); $('btnBuild').click(); await sleep(50);
+    say('error shown: ' + $('buildOut').textContent.trim() + ' | gutter marks line: ' + ($('gutter').querySelector('.err') || {}).textContent);
+    for (let i = 0; i < $('exampleSel').options.length - 1; i++) { pick($('exampleSel'), String(i)); $('btnBuild').click(); const t = $('buildOut').textContent; if (!/^Built/.test(t)) say('EXAMPLE ' + i + ' FAILED: ' + t.trim()); }
+    say('all examples compiled');
+    pick($('exampleSel'), '0'); $('btnSrcToAsm').click(); await sleep(100);
+    say('asm editor shown: ' + !$('asmSrc').closest('.workspace').hidden + ', lines ' + $('asmSrc').value.split('\n').length + ', has MAIN: ' + $('asmSrc').value.includes('vmthread MAIN {'));
+    $('btnBuildAsm').click(); await sleep(50); say('assemble: ' + $('buildOut').textContent.trim());
+    d.querySelector('input[name=link][value=sim]').click(); $('btnConnect').click(); await sleep(1500);
+    say('sim connected: ' + $('linkText').textContent);
+    $('btnRunNow').click(); await sleep(4000); say('run now (asm): ' + $('buildOut').textContent.trim());
+    d.querySelector('.seg button[data-mode=text]').click(); await sleep(50); $('btnRunNow').click(); await sleep(4000); say('run now (evc): ' + $('buildOut').textContent.trim());
+    $('btnUploadBlocks').click(); await sleep(2000); say('upload (evc): ' + $('buildOut').textContent.trim().split('\n')[0]);
+    d.querySelector('.seg button[data-mode=blocks]').click(); await sleep(800); $('btnBlocksToAsm').click(); await sleep(100);
+    say('blocks -> asm: lines ' + $('asmSrc').value.split('\n').length + ', has MAIN: ' + $('asmSrc').value.includes('vmthread MAIN {'));
+    $('btnBuildAsm').click(); await sleep(50); say('assemble blocks listing: ' + $('buildOut').textContent.trim());
+    say('SMOKE OK');
+  } catch (e) { say('SMOKE FAIL ' + (e.stack || e)); }
+});
+</script>
+</body></html>

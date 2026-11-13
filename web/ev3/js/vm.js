@@ -44,11 +44,13 @@ var OpenEV3 = (typeof OpenEV3 !== 'undefined') ? OpenEV3 : {};
       if (size === 0 || b === 0x84) { let end = this.pc; while (end < this.code.length && this.code[end]) end++; const s = new TextDecoder().decode(this.code.subarray(this.pc, end)); this.pc = end + 1; return s; }
       const dv = new DataView(this.code.buffer, this.code.byteOffset, this.code.byteLength);
       let v;
-      if (size === 1) { v = dv.getInt8(this.pc); this.pc += 1; } else if (size === 2) { v = dv.getInt16(this.pc, true); this.pc += 2; } else { v = dv.getInt32(this.pc, true); this.pc += 4; }
+      if (size === 1) { v = dv.getInt8(this.pc); this.pc += 1; } else if (size === 2) { v = dv.getInt16(this.pc, true); this.pc += 2; }
+      else { v = dv.getInt32(this.pc, true); this.imm4 = dv.getFloat32(this.pc, true); this.pc += 4; return v; }
       return v;
     }
     isRef(p) { return p !== null && typeof p === 'object'; }
-    val(size, f) { const p = this.param(); return this.isRef(p) ? this.read(p, size || 4, f) : p; }
+    /* a 4-byte immediate used where the opcode expects a float is the float's bit pattern (LCF), as on the brick */
+    val(size, f) { this.imm4 = null; const p = this.param(); if (this.isRef(p)) return this.read(p, size || 4, f); return (f && this.imm4 !== null) ? this.imm4 : p; }
     ref() { const p = this.param(); if (!this.isRef(p)) throw new VMError('expected a variable at ' + this.pc); return p; }
     read(r, size, f) { const dv = r.mem === 'g' ? this.gv : this.lv; if (size === 1) return dv.getInt8(r.off); if (size === 2) return dv.getInt16(r.off, true); return f ? dv.getFloat32(r.off, true) : dv.getInt32(r.off, true); }
     write(r, value, size, f) {
@@ -119,12 +121,19 @@ var OpenEV3 = (typeof OpenEV3 !== 'undefined') ? OpenEV3 : {};
   H.RANDOM = function () { const lo = this.val(2), hi = this.val(2), r = this.ref(); const a = Math.min(lo, hi), b = Math.max(lo, hi); this.write(r, a + Math.floor(Math.random() * (b - a + 1)), 2); };
   H.STRINGS = function () {
     const sub = this.val(1);
-    if (sub === 2) { const a = this.sval(), b = this.sval(), size = this.val(1), r = this.ref(); this.writeStr(r, a + b, size); }
+    if (sub === 1) { const s = this.sval(), r = this.ref(); this.write(r, s.length, 1); }
+    else if (sub === 2) { const a = this.sval(), b = this.sval(), size = this.val(1), r = this.ref(); this.writeStr(r, a + b, size); }
     else if (sub === 3) { const a = this.sval(), b = this.sval(), r = this.ref(); this.write(r, a === b ? 1 : 0, 1); }
     else if (sub === 5) { const v = this.val(4, true); this.val(1); const dec = this.val(1), r = this.ref(); this.writeStr(r, v.toFixed(dec), 32); }
     else if (sub === 6) { const v = this.val(2); this.val(1); const r = this.ref(); this.writeStr(r, String(v), 32); }
     else throw new VMError('STRINGS ' + sub);
   };
+  /* raw access to the global area (arrays with computed indices): PRGID, OBJID (0 = globals), OFFSET, SIZE, destination */
+  H.MEMORY_READ = function () { this.val(2); this.val(2); const off = this.val(4), size = this.val(4), r = this.ref(); const mem = r.mem === 'g' ? this.g : this.l; if (off < 0 || off + size > this.g.length) throw new VMError('array index out of range'); mem.set(this.g.subarray(off, off + size), r.off); };
+  H.MEMORY_WRITE = function () { this.val(2); this.val(2); const off = this.val(4), size = this.val(4), r = this.ref(); const mem = r.mem === 'g' ? this.g : this.l; if (off < 0 || off + size > this.g.length) throw new VMError('array index out of range'); this.g.set(mem.subarray(r.off, r.off + size), off); };
+  H.MAILBOX_OPEN = function () { this.val(1); this.sval(); this.val(1); this.val(1); this.val(1); this.write(this.ref(), 0, 1); };
+  H.MAILBOX_WRITE = function () { this.sval(); this.val(1); const box = this.sval(); this.val(1); const n = this.val(1); const vals = []; for (let i = 0; i < n; i++) vals.push(this.sval()); this.b.log.push('MAILBOX ' + box + ' ' + vals.join(' ')); };
+  H.MAILBOX_READ = function () { this.val(1); const size = this.val(2); this.val(1); const r = this.ref(); this.writeStr(r, '', size); };
   H.TIMER_WAIT = function () { const ms = this.val(4), r = this.ref(); this.pendingSleep = ms / 1000; this.write(r, 0, 4); };
   H.TIMER_READY = function () { this.val(4); };
   H.TIMER_READ = function () { this.write(this.ref(), Math.floor(this.b.clock() * 1000) % 2147483647, 4); };
@@ -250,6 +259,9 @@ var OpenEV3 = (typeof OpenEV3 !== 'undefined') ? OpenEV3 : {};
       if (!key) { this.write(sizeR, 0, 4); this.write(ipR, 0, 4); throw new VMError('program not found: ' + name); }
       this.b.runningProgram = key; this.write(sizeR, this.b.files[key].length, 4); this.write(ipR, 0, 4);
     }
+    else if (sub === F.OPEN_WRITE || sub === F.OPEN_APPEND) { const name = this.sval(), r = this.ref(); const h = (this.b.nextFile = (this.b.nextFile || 0) + 1); this.b.openFiles = this.b.openFiles || {}; this.b.openFiles[h] = name; if (sub === F.OPEN_WRITE || !(name in this.b.files)) this.b.files[name] = new Uint8Array(0); this.write(r, h, 2); }
+    else if (sub === F.WRITE_TEXT) { const h = this.val(2), del = this.val(1), s = this.sval(); const name = (this.b.openFiles || {})[h]; if (!name) throw new VMError('file handle ' + h + ' is not open'); const add = new TextEncoder().encode(s + ({ 1: '\t', 2: ' ', 3: '\r', 4: ':', 5: ',', 6: '\n', 7: '\r\n' }[del] || '')); const old = this.b.files[name]; const out = new Uint8Array(old.length + add.length); out.set(old); out.set(add, old.length); this.b.files[name] = out; }
+    else if (sub === F.CLOSE) { const h = this.val(2); if (this.b.openFiles) delete this.b.openFiles[h]; }
     else if (sub === F.MAKE_FOLDER) { this.sval(); this.write(this.ref(), 1, 1); }
     else if (sub === F.REMOVE) { const n = this.sval(); delete this.b.files[n]; }
     else throw new VMError('FILE ' + sub);

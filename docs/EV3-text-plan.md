@@ -1,8 +1,11 @@
 # Plan: a free text language for the EV3 on stock firmware
 
-Status: proposal, 2026-11-13. Nothing built yet. Prompted by Pybricks putting block
-coding behind a licence; Brandon wants OpenEV3 to offer a text route of its own, free,
-with no firmware change, so the Pybricks link can be retired.
+Status: phases 0, 1 and 2 built 2026-11-13 (assembly editor, EVC compiler with functions,
+arrays, strings, tasks, switch, data logging; every Pybricks mention removed). Decisions:
+name EVC, NXC-style API names, c4ev3 kept as optional phase 3, Pybricks removed entirely.
+Mailboxes and arrays with computed indices are untested on hardware. Language guide:
+[EVC.md](EVC.md). Originally a proposal written the same day, prompted by Pybricks
+putting block coding behind a licence.
 
 ## The question
 

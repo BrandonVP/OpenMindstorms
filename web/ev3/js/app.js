@@ -209,10 +209,55 @@
     toast('OK, globals: ' + (g.length ? P.hex(g) : '(none)'), 'good', 6000);
   }));
 
-  /* ------------------------------------------------ program: blocks (needs asm.js + blocks.js) */
-  const Bk = OpenEV3.blocks, A = OpenEV3.asm;
+  /* ------------------------------------------------ program: blocks, EVC text and assembly share one build pipeline */
+  const Bk = OpenEV3.blocks, A = OpenEV3.asm, E = OpenEV3.evc;
   let bws = null, editorMode = 'blocks', built = null;
-  function refreshGenerated() { if (!bws || !Bk) return; try { built = Bk.generate(bws); $('genCode').textContent = built.listing; } catch (e) { built = null; $('genCode').textContent = '// ' + e.message; } }
+  const ASM_STARTER = '; OpenEV3 assembly: the brick\'s own bytecode, one instruction per line.\n; Declare variables first, then one vmthread block per thread. Press Assemble, then Run now.\nDATA32 t\n\nvmthread MAIN {\n    UI_DRAW(TEXT, 1, 2, 2, "Hello from assembly")\n    UI_DRAW(UPDATE)\n    SOUND(TONE, 50, 880, 200)\n    TIMER_WAIT(300, t)\n    TIMER_READY(t)\n}\n';
+  const editors = {
+    text: { ta: $('src'), gutter: $('gutter'), key: 'src', api: OpenEV3.evcApi || [], list: $('apiList'), search: $('apiSearch'), errLine: null, compile: s => E.compile(s), label: 'evc', ext: '.evc', starter: () => (OpenEV3.evcExamples || [{ source: 'task main()\n{\n    \n}\n' }])[0].source },
+    asm: { ta: $('asmSrc'), gutter: $('asmGutter'), key: 'asm', api: OpenEV3.asmApi || [], list: $('asmApiList'), search: $('asmApiSearch'), errLine: null, compile: s => E.assemble(s), label: 'asm', ext: '.lms', starter: () => ASM_STARTER },
+  };
+  function renderGutter(ed) { const n = ed.ta.value.split('\n').length; let html = ''; for (let i = 1; i <= n; i++) html += (i === ed.errLine ? '<span class="err">' + i + '</span>' : i) + '\n'; ed.gutter.innerHTML = html; ed.gutter.scrollTop = ed.ta.scrollTop; }
+  function insertSnippet(ed, text) {
+    const src = ed.ta; const s = src.selectionStart, e = src.selectionEnd; let snippet = text;
+    if (text.endsWith('\n')) { const ls = src.value.lastIndexOf('\n', s - 1) + 1; const indent = (/^[ \t]*/.exec(src.value.slice(ls, s)) || [''])[0]; const atStart = src.value.slice(ls, s).trim() === ''; snippet = text.replace(/\n(?=.)/g, '\n' + indent); if (!atStart) snippet = '\n' + indent + snippet; snippet = snippet.replace(/\n$/, '\n' + indent); }
+    src.setRangeText(snippet, s, e, 'end');
+    const bodyAt = snippet.indexOf('{\n'); if (bodyAt >= 0) { const nl = snippet.indexOf('\n', bodyAt + 2); src.selectionStart = src.selectionEnd = s + (nl >= 0 ? nl : bodyAt + 2); }
+    src.dispatchEvent(new Event('input')); src.focus();
+  }
+  function renderApi(ed, filter) {
+    const list = ed.list; list.innerHTML = ''; const q = (filter || '').trim().toLowerCase(); let group = null, shown = 0;
+    ed.api.forEach(item => {
+      if (q && !(item.n + ' ' + item.s + ' ' + item.d + ' ' + item.g).toLowerCase().includes(q)) return;
+      if (item.g !== group) { group = item.g; const h = document.createElement('h4'); h.textContent = group; list.appendChild(h); }
+      const b = document.createElement('button'); b.type = 'button'; b.title = item.i ? 'Insert at the cursor' : ''; b.innerHTML = '<b></b><span></span>'; b.firstChild.textContent = item.s; b.lastChild.textContent = item.d; if (item.i) b.addEventListener('click', () => insertSnippet(ed, item.i)); list.appendChild(b); shown++;
+    });
+    if (!shown) { const d = document.createElement('div'); d.className = 'none'; d.textContent = 'Nothing matches "' + filter + '".'; list.appendChild(d); }
+  }
+  for (const ed of Object.values(editors)) {
+    ed.ta.addEventListener('input', () => { ed.errLine = null; renderGutter(ed); store.set(ed.key, ed.ta.value); if (window.OMAccount) OMAccount.changed(); });
+    ed.ta.addEventListener('scroll', () => { ed.gutter.scrollTop = ed.ta.scrollTop; });
+    ed.ta.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); ed.ta.setRangeText('    ', ed.ta.selectionStart, ed.ta.selectionEnd, 'end'); ed.ta.dispatchEvent(new Event('input')); } });
+    ed.search.addEventListener('input', e => renderApi(ed, e.target.value));
+    renderApi(ed, '');
+  }
+  function setText(ed, value) { ed.ta.value = value; ed.ta.dispatchEvent(new Event('input')); }
+  (OpenEV3.evcExamples || []).forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('exampleSel').appendChild(o); });
+  $('exampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = OpenEV3.evcExamples[e.target.value]; hit('example', ex.name); if (window.OMAccount) OMAccount.unlink(); setText(editors.text, ex.source); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
+  $('btnSrcNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); setText(editors.text, 'task main()\n{\n    \n}\n'); });
+  $('btnAsmNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); setText(editors.asm, ASM_STARTER); });
+  $('btnOpenSrc').addEventListener('click', () => $('fileSrc').click()); $('btnOpenAsm').addEventListener('click', () => $('fileAsm').click());
+  async function openInto(ed, input) { const f = input.files[0]; if (!f) return; if (window.OMAccount) OMAccount.unlink(); setText(ed, await f.text()); setProgName(f.name.replace(/\.[^.]+$/, '')); toast('Opened ' + f.name); input.value = ''; }
+  $('fileSrc').addEventListener('change', e => openInto(editors.text, e.target)); $('fileAsm').addEventListener('change', e => openInto(editors.asm, e.target));
+  $('btnSaveSrc').addEventListener('click', () => saveBlob(progBase() + '.evc', editors.text.ta.value, 'text/plain'));
+  $('btnSaveAsm').addEventListener('click', () => saveBlob(progBase() + '.lms', editors.asm.ta.value, 'text/plain'));
+  $('btnBuild').addEventListener('click', () => build()); $('btnBuildAsm').addEventListener('click', () => build());
+  $('btnSrcToAsm').addEventListener('click', () => { const b = build(); if (!b) return; setText(editors.asm, b.listing); setEditorMode('asm'); toast('Bytecode listing copied to the Assembly editor'); });
+  $('btnBlocksToAsm').addEventListener('click', () => { refreshGenerated(); if (!built) { toast($('genCode').textContent, 'bad'); return; } setText(editors.asm, built.listing); setEditorMode('asm'); toast('Bytecode listing copied to the Assembly editor'); });
+  function progBase() { return $('progName').value.trim().replace(/^OpenEV3\//, '').replace(/\.rbf$/i, '') || 'Program'; }
+  function setProgName(n) { n = String(n || '').replace(/[^A-Za-z0-9_\- ]/g, '').trim().slice(0, 30); if (!n) return; $('progName').value = 'OpenEV3/' + n; store.set('progName', 'OpenEV3/' + n); }
+
+  function refreshGenerated() { if (!bws || !Bk) return; try { built = Bk.generate(bws); if (editorMode === 'blocks') $('genCode').textContent = built.listing; } catch (e) { built = null; if (editorMode === 'blocks') $('genCode').textContent = '// ' + e.message; } }
   function saveBlocksState() { if (!bws) return; try { store.set('blocks', JSON.stringify(Blockly.serialization.workspaces.save(bws))); } catch (e) { /* ignore */ } if (window.OMAccount) OMAccount.changed(); }
   function loadBlocks(json) { if (!bws) return; bws.clear(); Blockly.serialization.workspaces.load(json, bws); refreshGenerated(); saveBlocksState(); }
   function ensureBlockly() {
@@ -225,29 +270,45 @@
     refreshGenerated();
     Bk.examples.forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('blockExampleSel').appendChild(o); });
   }
+  const MODES = ['blocks', 'text', 'asm'];
   function setEditorMode(mode) {
+    if (!MODES.includes(mode)) mode = 'blocks';
     editorMode = mode;
-    document.querySelectorAll('.mode-blocks').forEach(el => { el.hidden = mode !== 'blocks'; });
-    document.querySelectorAll('.mode-python').forEach(el => { el.hidden = mode !== 'python'; });
+    MODES.forEach(m => document.querySelectorAll('.mode-' + m).forEach(el => { el.hidden = mode !== m; }));
     document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === mode)));
     store.set('mode', mode);
-    if (mode === 'blocks') { ensureBlockly(); setTimeout(() => bws && Blockly.svgResize(bws), 0); }
+    if (mode === 'blocks') { ensureBlockly(); refreshGenerated(); setTimeout(() => bws && Blockly.svgResize(bws), 0); }
+    else { $('genCode').textContent = built && built.listing && built.from === mode ? built.listing : ''; renderGutter(editors[mode]); }
   }
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setEditorMode(b.dataset.mode); hit('editor_mode', b.dataset.mode); }));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
-  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '' || !Bk) return; const ex = Bk.examples[e.target.value]; hit('example', ex.name); if (window.OMAccount) OMAccount.unlink(); loadBlocks(ex.json); $('progName').value = 'OpenEV3/' + ex.name.split(/[:(]/)[0].replace(/\s+/g, ''); e.target.value = ''; });
+  $('blockExampleSel').addEventListener('change', e => { if (e.target.value === '' || !Bk) return; const ex = Bk.examples[e.target.value]; hit('example', ex.name); if (window.OMAccount) OMAccount.unlink(); loadBlocks(ex.json); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
   $('btnBlocksNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); loadBlocks({ blocks: { languageVersion: 0, blocks: [{ type: 'ev3_program', x: 40, y: 40 }] } }); });
   $('btnOpenBlocks').addEventListener('click', () => $('fileBlocks').click());
   $('fileBlocks').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { if (window.OMAccount) OMAccount.unlink(); loadBlocks(JSON.parse(await f.text())); toast('Opened ' + f.name); } catch (err) { toast(f.name + ': not a blocks file', 'bad'); } e.target.value = ''; });
   $('btnSaveBlocks').addEventListener('click', () => bws && saveBlob('program.ev3blocks.json', JSON.stringify(Blockly.serialization.workspaces.save(bws), null, 1), 'application/json'));
   function setOut(lines) { const out = $('buildOut'); out.innerHTML = ''; lines.forEach(([cls, t]) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; out.appendChild(s); }); }
-  function build() { refreshGenerated(); hit('compile', 'blocks', !!built); if (!built) { setOut([['e', $('genCode').textContent]]); return null; } setOut([['ok', 'Built: ' + built.main.length + ' bytes of bytecode, ' + built.globals + ' global bytes, ' + built.threads.length + ' thread' + (built.threads.length === 1 ? '' : 's')]]); return built; }
+  const summary = b => 'Built: ' + b.main.length + ' bytes of bytecode, ' + b.globals + ' global bytes, ' + b.threads.length + ' thread' + (b.threads.length === 1 ? '' : 's') + (b.globals > 1023 ? '. More than 1023 global bytes: Upload only.' : '');
+  function build() {
+    if (editorMode === 'blocks') { refreshGenerated(); hit('compile', 'blocks', !!built); if (!built) { setOut([['e', $('genCode').textContent]]); return null; } built.from = 'blocks'; setOut([['ok', summary(built)]]); return built; }
+    const ed = editors[editorMode]; ed.errLine = null;
+    try {
+      built = ed.compile(ed.ta.value); built.from = editorMode; hit('compile', ed.label, true);
+      $('genCode').textContent = built.listing; setOut([['ok', summary(built)]]); renderGutter(ed); return built;
+    } catch (e) {
+      built = null; hit('compile', ed.label, false); ed.errLine = e.line || null; $('genCode').textContent = '';
+      setOut([['e', (e.line ? 'Line ' + e.line + (e.col ? ', column ' + e.col : '') + ': ' : '') + e.message]]); renderGutter(ed);
+      if (ed.errLine) { const lines = ed.ta.value.split('\n'); const pre = lines.slice(0, ed.errLine - 1).join('\n').length + (ed.errLine > 1 ? 1 : 0); ed.ta.focus(); ed.ta.setSelectionRange(pre, pre + (lines[ed.errLine - 1] || '').length); }
+      return null;
+    }
+  }
   function progPath() { let n = $('progName').value.trim().replace(/\.rbf$/i, ''); if (!n.includes('/')) n = 'OpenEV3/' + n; return n; }
   $('btnRunNow').addEventListener('click', async () => {
     const b = build(); if (!b) return;
-    if (b.threads.length > 1) { toast('This program has parallel sequences; use Upload, then Run on brick.', 'bad'); return; }
+    if (b.threads.length > 1) toast('Only the main task runs with "Run now"; use Upload, then Run uploaded, for the other tasks.', '', 6000);
     const size = b.main.length + 7;
     if (size > P.MAX_MESSAGE) { toast('Program is ' + size + ' bytes, too big to run directly (max 1024). Use Upload, then Run uploaded.', 'bad', 7000); return; }
+    if (b.globals > 1023) { toast('Program uses ' + b.globals + ' bytes of variables, too many to run directly (max 1023). Use Upload, then Run uploaded.', 'bad', 7000); return; }
     await run('Running', async () => { $('genDetails').open = false; const g = await ev3.runBytecode(b.direct, b.globals, b.locals); setOut([['ok', 'Ran on the brick as a direct command (' + size + ' bytes).' + (g.length ? ' Globals: ' + P.hex(g.subarray(0, 32)) : '')]]); });
   });
   async function uploadProgram() {
@@ -256,7 +317,7 @@
     return run('Sending program ' + name, async () => {
       const dir = name.split('/').slice(0, -1).join('/'); try { await ev3.mkdir(dir); } catch (e) { /* exists */ }
       await ev3.upload(name, b.rbf, progressUI('progUpload', 'progUploadText', name));
-      setOut([['ok', 'Uploaded ' + name + ' (' + b.rbf.length + ' bytes). On the brick: File Navigation > ' + dir.replace(/^OpenEV3$/, 'OpenEV3') + ' > ' + name.split('/').pop().replace('.rbf', '')]]);
+      setOut([['ok', 'Uploaded ' + name + ' (' + b.rbf.length + ' bytes). On the brick: File Navigation > ' + dir + ' > ' + name.split('/').pop().replace('.rbf', '')]]);
       toast('Uploaded as ' + name, 'good', 6000);
     });
   }
@@ -276,6 +337,7 @@
       document.querySelector('input[name=link][value=sim]').checked = true;
     } else { const saved = store.get('link', 'usb'); const r = document.querySelector('input[name=link][value="' + saved + '"]'); if (r && !r.disabled) r.checked = true; }
     $('progName').value = store.get('progName', 'OpenEV3/Program'); $('progName').addEventListener('input', e => store.set('progName', e.target.value));
+    for (const ed of Object.values(editors)) { ed.ta.value = store.get(ed.key, ed.starter()); renderGutter(ed); }
     setEditorMode(store.get('mode', 'blocks'));
     const h = location.hash.slice(1); showView(VIEWS.includes(h) ? h : store.get('view', 'connect'));
   }
@@ -283,11 +345,12 @@
   // Optional sign-in + online library (web/shared/account.js); invisible without the service.
   if (window.OMAccount) OMAccount.init({
     app: 'ev3', store, toast,
-    get: () => ({ name: $('progName').value.trim().replace(/^OpenEV3\//, '').replace(/\.rbf$/i, '') || 'Program', mode: editorMode, blocks: bws ? JSON.stringify(Blockly.serialization.workspaces.save(bws)) : store.get('blocks', ''), src: '' }),
+    get: () => ({ name: progBase(), mode: editorMode, blocks: bws ? JSON.stringify(Blockly.serialization.workspaces.save(bws)) : store.get('blocks', ''), src: editorMode === 'blocks' ? '' : editors[editorMode].ta.value }),
     set: p => {
-      setEditorMode('blocks');
-      if (p.blocks) { try { ensureBlockly(); loadBlocks(JSON.parse(p.blocks)); } catch (e) { /* not a blocks program */ } }
-      const n = p.name.replace(/[^A-Za-z0-9_\- ]/g, '').trim().slice(0, 30); if (n) { $('progName').value = 'OpenEV3/' + n; store.set('progName', 'OpenEV3/' + n); }
+      const mode = (p.mode === 'text' || p.mode === 'asm') ? p.mode : 'blocks'; setEditorMode(mode);
+      if (mode === 'blocks') { if (p.blocks) { try { ensureBlockly(); loadBlocks(JSON.parse(p.blocks)); } catch (e) { /* not a blocks program */ } } }
+      else setText(editors[mode], p.src || '');
+      setProgName(p.name);
     },
   });
 })();

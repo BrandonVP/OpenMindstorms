@@ -91,7 +91,7 @@ var OpenEV3 = (typeof OpenEV3 !== 'undefined') ? OpenEV3 : {};
   const LC1 = v => [0x81, v & 0xFF];
   const LC2 = v => [0x82, ...u16(v)];
   const LC4 = v => [0x83, ...i32(v)];
-  const LCF = v => [0x83, ...f32(v)];
+  const LCF = v => { const a = [0x83, ...f32(v)]; a.isF = true; return a; };   // isF: lets the assembler listing print it as a float
   const LCS = s => [0x84, ...Array.from(new TextEncoder().encode(String(s))), 0];
   const LC = v => { v = Math.round(v); if (v >= -32 && v <= 31) return LC0(v); if (v >= -128 && v <= 127) return LC1(v); if (v >= -32768 && v <= 32767) return LC2(v); return LC4(v); };
   const GV0 = i => [0x60 | (i & 0x1F)];

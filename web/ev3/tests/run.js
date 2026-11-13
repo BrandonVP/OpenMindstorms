@@ -3,10 +3,11 @@
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const root = path.resolve(__dirname, '..');
 const ctx = vm.createContext({ console, setTimeout, clearTimeout, TextDecoder, TextEncoder, Uint8Array, DataView, Map, Set, Promise, Date, Math, Number, String, Object, Array, Error, JSON, RegExp, performance });
-for (const f of ['protocol.js', 'vm.js', 'ev3.js', 'transports.js', 'sim.js']) vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), ctx, { filename: f });
+for (const f of ['protocol.js', 'vm.js', 'ev3.js', 'transports.js', 'sim.js', 'asm.js', 'evc.js']) vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), ctx, { filename: f });
 const { protocol: P, vm: V, EV3, sim: S } = ctx.OpenEV3;
 const tests = []; const test = (n, f) => tests.push({ n, f });
 const eq = (a, b) => assert.deepEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
+require('./evc-tests.js')(ctx, test, assert, eq);
 const { LC, LC0, LC1, LC2, LCS, GV, op } = P;
 
 test('encoding and framing', () => {

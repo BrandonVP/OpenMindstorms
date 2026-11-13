@@ -328,8 +328,12 @@ display, sound, status light, wait/loop/switch, every EV3 and NXT sensor, data
 operations, variables, parallel beams, My Blocks) and compiles the program to lms2012
 bytecode in the browser. **Run now** sends it as a direct command; **Upload** wraps it
 in an `.rbf` file in the brick's `prjs` folder so it shows up in the brick's own menu.
-For Python, the Workbench links out to [Pybricks](https://pybricks.com/), which runs
-natively on the EV3 and is reversible.
+For text programming there is **EVC**, a small C-like language in the spirit of NQC
+and NXC, compiled in the browser to the same bytecode (tasks, functions, int/float/bool,
+arrays, strings, an NXC-flavoured API for motors, sensors, display, sound and data
+logging); the language guide is [docs/EVC.md](docs/EVC.md). A third editor shows and
+accepts the bytecode assembly listing itself, so you can see exactly what the blocks or
+EVC compiled to, or write bytecode by hand. Nothing in OpenEV3 needs a firmware change.
 
 ```
 ev3 ports                 # USB bricks and Bluetooth COM ports
