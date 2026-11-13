@@ -26,6 +26,13 @@ COPY tower/ /usr/share/nginx/html/tower/
 # Files copied onto the NAS share over SMB arrive owner-only (0600/0700) and COPY
 # keeps those modes; nginx's worker runs as user "nginx", so open them up.
 RUN chmod -R a+rX /usr/share/nginx/html
+# Cache busting: Cloudflare and browsers cache .js/.css for hours, so every local script and
+# stylesheet reference gets ?v=<hash of all scripts and stylesheets>, which changes exactly when
+# they do. External URLs (with a scheme) are left alone.
+RUN v=$(find /usr/share/nginx/html -type f \( -name '*.js' -o -name '*.css' \) | sort | xargs cat | md5sum | head -c 8) \
+    && find /usr/share/nginx/html -name '*.html' -not -path '*/vendor/*' \
+       -exec sed -i -E "s#(src|href)=\"([^\":?]+\.(js|css))\"#\1=\"\2?v=$v\"#g" {} + \
+    && echo "assets versioned as ?v=$v"
 
 ENV SERVER_IP=192.168.68.208
 
