@@ -216,6 +216,7 @@
   const editors = {
     text: { ta: $('src'), gutter: $('gutter'), key: 'src', api: OpenEV3.evcApi || [], list: $('apiList'), search: $('apiSearch'), errLine: null, compile: s => E.compile(s), label: 'evc', ext: '.evc', starter: () => (OpenEV3.evcExamples || [{ source: 'task main()\n{\n    \n}\n' }])[0].source },
     asm: { ta: $('asmSrc'), gutter: $('asmGutter'), key: 'asm', api: OpenEV3.asmApi || [], list: $('asmApiList'), search: $('asmApiSearch'), errLine: null, compile: s => E.assemble(s), label: 'asm', ext: '.lms', starter: () => ASM_STARTER },
+    c: { ta: $('csrc'), gutter: $('cGutter'), key: 'csrc', api: OpenEV3.cApi || [], list: $('cApiList'), search: $('cApiSearch'), errLine: null, compile: null, label: 'c', ext: '.c', starter: () => (OpenEV3.cExamples || [{ source: '#include <ev3.h>\n\nint main(void)\n{\n    InitEV3();\n    \n    FreeEV3();\n    return 0;\n}\n' }])[0].source },
   };
   function renderGutter(ed) { const n = ed.ta.value.split('\n').length; let html = ''; for (let i = 1; i <= n; i++) html += (i === ed.errLine ? '<span class="err">' + i + '</span>' : i) + '\n'; ed.gutter.innerHTML = html; ed.gutter.scrollTop = ed.ta.scrollTop; }
   function insertSnippet(ed, text) {
@@ -245,6 +246,25 @@
   (OpenEV3.evcExamples || []).forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('exampleSel').appendChild(o); });
   $('exampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = OpenEV3.evcExamples[e.target.value]; hit('example', ex.name); if (window.OMAccount) OMAccount.unlink(); setText(editors.text, ex.source); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
   $('btnSrcNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); setText(editors.text, 'task main()\n{\n    \n}\n'); });
+  (OpenEV3.cExamples || []).forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('cExampleSel').appendChild(o); });
+  $('cExampleSel').addEventListener('change', e => { if (e.target.value === '') return; const ex = OpenEV3.cExamples[e.target.value]; hit('example', ex.name); if (window.OMAccount) OMAccount.unlink(); setText(editors.c, ex.source); setProgName(ex.name.split(/[:(]/)[0].replace(/\s+/g, '')); e.target.value = ''; });
+  $('btnCNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); setText(editors.c, '#include <ev3.h>\n\nint main(void)\n{\n    InitEV3();\n    \n    FreeEV3();\n    return 0;\n}\n'); });
+  $('btnOpenC').addEventListener('click', () => $('fileC').click()); $('fileC').addEventListener('change', e => openInto(editors.c, e.target));
+  $('btnSaveC').addEventListener('click', () => saveBlob(progBase() + '.c', editors.c.ta.value, 'text/plain'));
+  $('btnBuildC').addEventListener('click', () => build());
+  const defaultCUrl = () => location.protocol === 'file:' ? 'https://www.openmindstorms.com/api/c4ev3' : '/api/c4ev3';
+  $('cCompileUrl').value = store.get('cCompileUrl', ''); $('cCompileUrl').addEventListener('input', e => store.set('cCompileUrl', e.target.value));
+  async function compileC(ed) {
+    const url = $('cCompileUrl').value.trim() || defaultCUrl(); setOut([['', 'Compiling on ' + url + ' …']]);
+    let r; try { r = await fetch(url + '?name=' + encodeURIComponent(progBase().replace(/[^A-Za-z0-9_]/g, '')), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: ed.ta.value }); }
+    catch (e) { hit('compile', 'c-unreachable', false); setOut([['e', 'Could not reach the compile server at ' + url + ' (' + e.message + ').'], ['', 'C programs are compiled by the OpenMindstorms server. From a local copy of this page, enter https://www.openmindstorms.com/api/c4ev3 above.']]); return null; }
+    if (r.status === 200) { const elf = new Uint8Array(await r.arrayBuffer()); hit('compile', 'c', true); const w = Number(r.headers.get('X-Compiler-Warnings') || 0); setOut([['ok', 'Compiled: ' + elf.length + ' byte native ARM program' + (w ? ' (' + w + ' compiler warning lines; see the server log)' : '') + '. Upload, then Run uploaded.']]); return { from: 'c', elf, main: elf, direct: null, threads: [], globals: 0, locals: 0, listing: '' }; }
+    const text = await r.text(); hit('compile', 'c', false);
+    for (const l of text.split('\n')) { const m = /^line (\d+)/.exec(l); if (m) { ed.errLine = Number(m[1]); break; } }
+    setOut(text.split('\n').map(l => ['e', l]).concat([['e', r.status === 422 ? 'Compilation failed' + (ed.errLine ? ' - first error on line ' + ed.errLine : '') + '.' : 'Compile server answered HTTP ' + r.status]]));
+    renderGutter(ed); if (ed.errLine) { const lines = ed.ta.value.split('\n'); const pre = lines.slice(0, ed.errLine - 1).join('\n').length + (ed.errLine > 1 ? 1 : 0); ed.ta.focus(); ed.ta.setSelectionRange(pre, pre + (lines[ed.errLine - 1] || '').length); }
+    return null;
+  }
   $('btnAsmNew').addEventListener('click', () => { if (window.OMAccount) OMAccount.unlink(); setText(editors.asm, ASM_STARTER); });
   $('btnOpenSrc').addEventListener('click', () => $('fileSrc').click()); $('btnOpenAsm').addEventListener('click', () => $('fileAsm').click());
   async function openInto(ed, input) { const f = input.files[0]; if (!f) return; if (window.OMAccount) OMAccount.unlink(); setText(ed, await f.text()); setProgName(f.name.replace(/\.[^.]+$/, '')); toast('Opened ' + f.name); input.value = ''; }
@@ -252,7 +272,7 @@
   $('btnSaveSrc').addEventListener('click', () => saveBlob(progBase() + '.evc', editors.text.ta.value, 'text/plain'));
   $('btnSaveAsm').addEventListener('click', () => saveBlob(progBase() + '.lms', editors.asm.ta.value, 'text/plain'));
   $('btnBuild').addEventListener('click', () => build()); $('btnBuildAsm').addEventListener('click', () => build());
-  $('btnSrcToAsm').addEventListener('click', () => { const b = build(); if (!b) return; setText(editors.asm, b.listing); setEditorMode('asm'); toast('Bytecode listing copied to the Assembly editor'); });
+  $('btnSrcToAsm').addEventListener('click', async () => { const b = await build(); if (!b) return; setText(editors.asm, b.listing); setEditorMode('asm'); toast('Bytecode listing copied to the Assembly editor'); });
   $('btnBlocksToAsm').addEventListener('click', () => { refreshGenerated(); if (!built) { toast($('genCode').textContent, 'bad'); return; } setText(editors.asm, built.listing); setEditorMode('asm'); toast('Bytecode listing copied to the Assembly editor'); });
   function progBase() { return $('progName').value.trim().replace(/^OpenEV3\//, '').replace(/\.rbf$/i, '') || 'Program'; }
   function setProgName(n) { n = String(n || '').replace(/[^A-Za-z0-9_\- ]/g, '').trim().slice(0, 30); if (!n) return; $('progName').value = 'OpenEV3/' + n; store.set('progName', 'OpenEV3/' + n); }
@@ -270,7 +290,7 @@
     refreshGenerated();
     Bk.examples.forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.name; $('blockExampleSel').appendChild(o); });
   }
-  const MODES = ['blocks', 'text', 'asm'];
+  const MODES = ['blocks', 'text', 'asm', 'c'];
   function setEditorMode(mode) {
     if (!MODES.includes(mode)) mode = 'blocks';
     editorMode = mode;
@@ -279,6 +299,7 @@
     store.set('mode', mode);
     if (mode === 'blocks') { ensureBlockly(); refreshGenerated(); setTimeout(() => bws && Blockly.svgResize(bws), 0); }
     else { $('genCode').textContent = built && built.listing && built.from === mode ? built.listing : ''; renderGutter(editors[mode]); }
+    $('btnRunNow').hidden = mode === 'c'; $('genDetails').hidden = mode === 'c';
   }
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setEditorMode(b.dataset.mode); hit('editor_mode', b.dataset.mode); }));
   window.addEventListener('resize', () => { if (bws && editorMode === 'blocks') Blockly.svgResize(bws); });
@@ -289,7 +310,8 @@
   $('btnSaveBlocks').addEventListener('click', () => bws && saveBlob('program.ev3blocks.json', JSON.stringify(Blockly.serialization.workspaces.save(bws), null, 1), 'application/json'));
   function setOut(lines) { const out = $('buildOut'); out.innerHTML = ''; lines.forEach(([cls, t]) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; out.appendChild(s); }); }
   const summary = b => 'Built: ' + b.main.length + ' bytes of bytecode, ' + b.globals + ' global bytes, ' + b.threads.length + ' thread' + (b.threads.length === 1 ? '' : 's') + (b.globals > 1023 ? '. More than 1023 global bytes: Upload only.' : '');
-  function build() {
+  async function build() {
+    if (editorMode === 'c') { const ed = editors.c; ed.errLine = null; renderGutter(ed); built = await compileC(ed); return built; }
     if (editorMode === 'blocks') { refreshGenerated(); hit('compile', 'blocks', !!built); if (!built) { setOut([['e', $('genCode').textContent]]); return null; } built.from = 'blocks'; setOut([['ok', summary(built)]]); return built; }
     const ed = editors[editorMode]; ed.errLine = null;
     try {
@@ -304,7 +326,7 @@
   }
   function progPath() { let n = $('progName').value.trim().replace(/\.rbf$/i, ''); if (!n.includes('/')) n = 'OpenEV3/' + n; return n; }
   $('btnRunNow').addEventListener('click', async () => {
-    const b = build(); if (!b) return;
+    const b = await build(); if (!b) return;
     if (b.threads.length > 1) toast('Only the main task runs with "Run now"; use Upload, then Run uploaded, for the other tasks.', '', 6000);
     const size = b.main.length + 7;
     if (size > P.MAX_MESSAGE) { toast('Program is ' + size + ' bytes, too big to run directly (max 1024). Use Upload, then Run uploaded.', 'bad', 7000); return; }
@@ -312,10 +334,17 @@
     await run('Running', async () => { $('genDetails').open = false; const g = await ev3.runBytecode(b.direct, b.globals, b.locals); setOut([['ok', 'Ran on the brick as a direct command (' + size + ' bytes).' + (g.length ? ' Globals: ' + P.hex(g.subarray(0, 32)) : '')]]); });
   });
   async function uploadProgram() {
-    const b = build(); if (!b) return false;
+    const b = await build(); if (!b) return false;
     const name = progPath() + '.rbf'; $('progUpload').style.width = '0%';
     return run('Sending program ' + name, async () => {
       const dir = name.split('/').slice(0, -1).join('/'); try { await ev3.mkdir(dir); } catch (e) { /* exists */ }
+      if (b.elf) {   // native program: the ELF plus a launcher .rbf that runs it from the menu
+        const elfName = progPath() + '.elf', abs = '/home/root/lms2012/prjs/' + elfName;
+        await ev3.upload(elfName, b.elf, progressUI('progUpload', 'progUploadText', elfName));
+        await ev3.upload(name, P.launcherRbf('chmod +x ' + abs + '; ' + abs));
+        setOut([['ok', 'Uploaded ' + elfName + ' (' + b.elf.length + ' bytes) and its launcher ' + name + '. Run uploaded, or pick it in the brick menu. The brick menu and this link pause until the program exits (Back button in the examples).']]);
+        toast('Uploaded as ' + name, 'good', 6000); return;
+      }
       await ev3.upload(name, b.rbf, progressUI('progUpload', 'progUploadText', name));
       setOut([['ok', 'Uploaded ' + name + ' (' + b.rbf.length + ' bytes). On the brick: File Navigation > ' + dir + ' > ' + name.split('/').pop().replace('.rbf', '')]]);
       toast('Uploaded as ' + name, 'good', 6000);
@@ -323,7 +352,7 @@
   }
   $('btnUploadBlocks').addEventListener('click', uploadProgram);
   $('btnRunUploaded').addEventListener('click', () => run('Run', async () => { await ev3.runProgram(progPath() + '.rbf'); toast('Running ' + progPath(), 'good'); }));
-  $('btnStopBlocks').addEventListener('click', () => run('Stop', async () => { await ev3.stopProgram(); await ev3.motorStop('ABCD', false); }));
+  $('btnStopBlocks').addEventListener('click', () => { if (editorMode === 'c') toast('A native C program cannot be stopped from here: the brick does not listen to the link while it runs. Make the program exit (the examples exit on the Back button).', 'bad', 8000); run('Stop', async () => { await ev3.stopProgram(); await ev3.motorStop('ABCD', false); }); });
 
   /* ------------------------------------------------ init */
   function init() {
@@ -347,7 +376,7 @@
     app: 'ev3', store, toast,
     get: () => ({ name: progBase(), mode: editorMode, blocks: bws ? JSON.stringify(Blockly.serialization.workspaces.save(bws)) : store.get('blocks', ''), src: editorMode === 'blocks' ? '' : editors[editorMode].ta.value }),
     set: p => {
-      const mode = (p.mode === 'text' || p.mode === 'asm') ? p.mode : 'blocks'; setEditorMode(mode);
+      const mode = (p.mode === 'text' || p.mode === 'asm' || p.mode === 'c') ? p.mode : 'blocks'; setEditorMode(mode);
       if (mode === 'blocks') { if (p.blocks) { try { ensureBlockly(); loadBlocks(JSON.parse(p.blocks)); } catch (e) { /* not a blocks program */ } } }
       else setText(editors[mode], p.src || '');
       setProgName(p.name);

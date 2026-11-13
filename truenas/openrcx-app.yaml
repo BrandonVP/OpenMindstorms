@@ -93,3 +93,13 @@ services:
       BACKUP_HOUR: "3"
       TZ: America/Chicago
     restart: unless-stopped
+
+  # Optional: native C for the EV3 (c4ev3 GCC toolchain + EV3-API). Downloads ~60 MB at build time.
+  # The site works without it; the C editor then reports that the compile server is unreachable.
+  c4ev3:
+    build:
+      context: /mnt/apps/configs/openrcx/src/truenas/c4ev3-service
+      dockerfile: Dockerfile
+    image: openrcx-c4ev3:local
+    pull_policy: build
+    restart: unless-stopped

@@ -126,6 +126,12 @@ var OpenEV3 = (typeof OpenEV3 !== 'undefined') ? OpenEV3 : {};
     for (const [bc, locals] of threads) { headers.push(...i32(offset), ...u16(0), ...u16(0), ...i32(locals)); code.push(...bc); offset += bc.length; }
     return Uint8Array.from([0x4C, 0x45, 0x47, 0x4F, ...i32(headerSize + code.length), ...u16(0x0068), ...u16(n), ...i32(globals), ...headers, ...code]);
   }
+  /* An .rbf that runs a shell command (a native program) when started from the brick's menu: the same
+   * bytecode ev3duder's mkrbf emits. opSYSTEM blocks the VM until the command ends, then a 1 s wait. */
+  function launcherRbf(cmd) {
+    const code = Uint8Array.from([OP.SYSTEM, ...LCS(cmd), ...LV0(4), OP.TIMER_WAIT, ...LC2(1000), ...LV0(0), OP.TIMER_READY, ...LV0(0), OP.OBJECT_END]);
+    return rbfImage([[code, 8]], 0);
+  }
   function parseFileListing(text) {
     const out = [];
     for (let line of text.split('\n')) {
@@ -146,6 +152,6 @@ var OpenEV3 = (typeof OpenEV3 !== 'undefined') ? OpenEV3 : {};
 
   ns.protocol = { T, USB, MAX_MESSAGE, SYS, SYSTEM_STATUS, OP, OP_NAMES, UI_READ, UI_WRITE, UI_DRAW, UI_BUTTON, BUTTONS, SOUND, INPUT_DEVICE, COM_GET, COM_SET,
     INFO, FILE, PROGRAM_INFO, MATH, LED_PATTERNS, USER_SLOT, DEVICE_TYPES, SENSOR_MODES, COLOR_NAMES, OUTPUT_PORTS,
-    u16, i32, f32, LC0, LC1, LC2, LC4, LCF, LCS, LC, GV0, GV1, GV2, GV, LV0, LV1, LV2, LV, op, directCommand, systemCommand, parseMessage, rbfImage,
+    u16, i32, f32, LC0, LC1, LC2, LC4, LCF, LCS, LC, GV0, GV1, GV2, GV, LV0, LV1, LV2, LV, op, directCommand, systemCommand, parseMessage, rbfImage, launcherRbf,
     parseFileListing, portMask, portIndex, cstr, rdF, rdI32, rdI8, hex };
 })(OpenEV3);

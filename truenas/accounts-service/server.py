@@ -61,7 +61,7 @@ PROVIDERS = {
     },
 }
 APPS = {"rcx", "nxt", "ev3"}
-MODES = {"blocks", "text", "asm", "python"}
+MODES = {"blocks", "text", "asm", "c", "python"}
 SESSION_DAYS = 90
 MAX_PROGRAMS = 500
 MAX_PROGRAM_BYTES = 512 * 1024

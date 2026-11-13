@@ -1,6 +1,8 @@
 # Plan: a free text language for the EV3 on stock firmware
 
-Status: phases 0, 1 and 2 built 2026-11-13 (assembly editor, EVC compiler with functions,
+Status: phases 0 to 3 built 2026-11-13 (phase 3 = the c4ev3 container + C editor, see
+[C4EV3.md](C4EV3.md); its image build and a C program on the brick are still to be confirmed).
+Phases 0, 1 and 2 built 2026-11-13 (assembly editor, EVC compiler with functions,
 arrays, strings, tasks, switch, data logging; every Pybricks mention removed). Decisions:
 name EVC, NXC-style API names, c4ev3 kept as optional phase 3, Pybricks removed entirely.
 Mailboxes and arrays with computed indices are untested on hardware. Language guide:

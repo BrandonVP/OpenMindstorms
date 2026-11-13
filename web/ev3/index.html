@@ -108,8 +108,8 @@
 
       <!-- ============================================================ PROGRAM -->
       <section class="view wide" id="view-program">
-        <header><h2>Program</h2><p>Build it from EV3-G style blocks, write <b>EVC</b> (a C-like language in the spirit of NQC and NXC), or write the brick's own assembly. Everything compiles to EV3 bytecode in the browser: run it now, or upload it so it appears in the brick's menu.</p>
-          <div class="seg" role="tablist" aria-label="Editor mode"><button role="tab" data-mode="blocks" aria-selected="true">Blocks</button><button role="tab" data-mode="text" aria-selected="false">EVC text</button><button role="tab" data-mode="asm" aria-selected="false">Assembly</button></div></header>
+        <header><h2>Program</h2><p>Build it from EV3-G style blocks, write <b>EVC</b> (a C-like language in the spirit of NQC and NXC), write the brick's own assembly, or write real C with the c4ev3 toolchain. Blocks, EVC and assembly compile to EV3 bytecode in the browser: run it now, or upload it so it appears in the brick's menu. C compiles on the server to a native program that Upload puts in the menu.</p>
+          <div class="seg" role="tablist" aria-label="Editor mode"><button role="tab" data-mode="blocks" aria-selected="true">Blocks</button><button role="tab" data-mode="text" aria-selected="false">EVC text</button><button role="tab" data-mode="asm" aria-selected="false">Assembly</button><button role="tab" data-mode="c" aria-selected="false">C</button></div></header>
         <div class="row mode-blocks" style="margin-bottom:10px">
           <label class="f"><span>Examples</span><select id="blockExampleSel"><option value="">Choose…</option></select></label>
           <button class="btn" id="btnBlocksNew">New</button>
@@ -157,6 +157,26 @@
               <span class="small muted">lms2012 bytecode; the full list is in LEGO's EV3 Firmware Developer Kit</span>
             </div>
             <div class="api-list" id="asmApiList"></div>
+          </aside>
+        </div>
+        <div class="row mode-c" style="margin-bottom:10px" hidden>
+          <label class="f"><span>Examples</span><select id="cExampleSel"><option value="">Choose…</option></select></label>
+          <button class="btn" id="btnCNew">New</button>
+          <button class="btn" id="btnOpenC">Open .c</button>
+          <button class="btn" id="btnSaveC">Save .c</button>
+          <input type="file" id="fileC" accept=".c,.h,.txt" hidden>
+          <span style="flex:1"></span>
+          <label class="f"><span>Compile server</span><input type="text" id="cCompileUrl" class="mono" style="width:20em" placeholder="/api/c4ev3"></label>
+          <button class="btn" id="btnBuildC" title="Compile on the server with GCC for ARM (nothing runs yet)">Compile</button>
+        </div>
+        <div class="workspace mode-c" hidden>
+          <div class="editor"><div class="gutter" id="cGutter">1</div><textarea id="csrc" spellcheck="false" aria-label="C source"></textarea></div>
+          <aside class="api" aria-label="EV3-API reference">
+            <div class="api-head">
+              <input type="search" id="cApiSearch" placeholder="Search the EV3-API… (click to insert)" aria-label="Search API">
+              <span class="small muted">Native C with the <a href="https://github.com/c4ev3/EV3-API" target="_blank" rel="noopener">c4ev3 EV3-API</a>, compiled on the server. The brick menu pauses while a C program runs; make it exit on the Back button.</span>
+            </div>
+            <div class="api-list" id="cApiList"></div>
           </aside>
         </div>
         <div class="row" style="margin-top:10px">
@@ -223,6 +243,7 @@
 <script src="js/evc.js"></script>
 <script src="data/evc_examples.js"></script>
 <script src="data/evc_api.js"></script>
+<script src="data/c_examples.js"></script>
 <script src="../shared/stats.js"></script>
 <script src="../shared/account.js"></script>
 <script src="js/app.js"></script>

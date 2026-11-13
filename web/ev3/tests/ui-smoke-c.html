@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>OpenEV3 C editor smoke test</title></head>
+<body><pre id="out">running…</pre>
+<iframe id="f" src="../index.html#program" width="1300" height="900"></iframe>
+<script>
+const out = []; const say = t => { out.push(t); document.getElementById('out').textContent = out.join('\n'); };
+const f = document.getElementById('f');
+f.addEventListener('load', async () => {
+  try {
+    const d = f.contentDocument, w = f.contentWindow; const $ = id => d.getElementById(id); const sleep = ms => new Promise(r => setTimeout(r, ms));
+    await sleep(500);
+    d.querySelector('.seg button[data-mode=c]').click(); await sleep(100);
+    say('c editor shown: ' + !$('csrc').closest('.workspace').hidden + ', run-now hidden: ' + $('btnRunNow').hidden + ', examples: ' + ($('cExampleSel').options.length - 1) + ', api: ' + $('cApiList').querySelectorAll('button').length);
+    // fake the compile server: success, then a 422 with a line number
+    let mode = 'ok';
+    w.fetch = async (url, opts) => { say('fetch ' + url + ' ' + (opts.body || '').length + ' bytes'); if (mode === 'ok') return new Response(new Uint8Array([0x7f, 0x45, 0x4c, 0x46, 1, 2, 3]), { status: 200, headers: { 'X-Compiler-Warnings': '0' } }); return new Response('line 3:5: error: oops\n', { status: 422 }); };
+    $('cExampleSel').value = '0'; $('cExampleSel').dispatchEvent(new Event('change')); $('btnBuildC').click(); await sleep(200);
+    say('compile ok: ' + $('buildOut').textContent.trim() + ' | name ' + $('progName').value);
+    mode = 'err'; $('btnBuildC').click(); await sleep(200);
+    say('compile error: ' + $('buildOut').textContent.trim().replace(/\n/g, ' / ') + ' | gutter: ' + ($('cGutter').querySelector('.err') || {}).textContent);
+    mode = 'ok';
+    d.querySelector('input[name=link][value=sim]').click(); $('btnConnect').click(); await sleep(1500);
+    $('btnUploadBlocks').click(); await sleep(2500); say('upload: ' + $('buildOut').textContent.trim().split('\n')[0].slice(0, 120));
+    const files = Object.keys(w.OpenEV3 && f.contentWindow.simFiles ? {} : {});
+    say('SMOKE OK');
+  } catch (e) { say('SMOKE FAIL ' + (e.stack || e)); }
+});
+</script></body></html>

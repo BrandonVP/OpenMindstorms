@@ -240,10 +240,11 @@ which Edge and Chrome use. The same file is also downloadable from
 If you would rather skip certificates, open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
 add `http://openrcx.vp`, and use plain HTTP; the page is served on both ports.
 
-The app has four containers: `openrcx` (nginx, the site), `nxc` (the NXC compiler
-behind `/api/nxc`, used by OpenNXT), `stats` (usage counters behind `/api/stats`) and
+The app has five containers: `openrcx` (nginx, the site), `nxc` (the NXC compiler
+behind `/api/nxc`, used by OpenNXT), `stats` (usage counters behind `/api/stats`),
 `accounts` (optional sign-in and the program library behind `/api/auth` and
-`/api/programs`).
+`/api/programs`) and `c4ev3` (optional, the C compiler for the EV3 behind `/api/c4ev3`;
+the site starts without it).
 When the YAML changes, update it in TrueNAS under Apps > openrcx > Edit before
 Stop/Start. The app, share and dataset keep the name `openrcx` from the first
 deployment; renaming them would mean reinstalling the app, so they stay.
@@ -334,6 +335,10 @@ arrays, strings, an NXC-flavoured API for motors, sensors, display, sound and da
 logging); the language guide is [docs/EVC.md](docs/EVC.md). A third editor shows and
 accepts the bytecode assembly listing itself, so you can see exactly what the blocks or
 EVC compiled to, or write bytecode by hand. Nothing in OpenEV3 needs a firmware change.
+For real C there is an optional fourth editor: the source is compiled on the server by the
+c4ev3 GCC toolchain against the c4ev3 EV3-API and uploaded as a native program with a
+launcher `.rbf`, see [docs/C4EV3.md](docs/C4EV3.md) (the brick menu pauses while such a
+program runs, so programs must exit on their own).
 
 ```
 ev3 ports                 # USB bricks and Bluetooth COM ports
