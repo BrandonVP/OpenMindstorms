@@ -24,9 +24,18 @@ Remove-Item $zip
 New-Item -ItemType Directory -Force (Join-Path $Share 'certs') | Out-Null
 New-Item -ItemType Directory -Force (Join-Path $Share 'stats') | Out-Null   # usage counters database
 New-Item -ItemType Directory -Force (Join-Path $Share 'accounts') | Out-Null   # accounts + program library database
-Copy-Item (Join-Path $repo 'truenas\openrcx-app.yaml') (Join-Path $Share 'openrcx-app.yaml') -Force
+# The YAML on the share holds Brandon's secrets (OAuth ids, stats key): never overwrite it.
+# The repo copy goes next to it as openrcx-app.yaml.new for comparing when services change.
+$shareYaml = Join-Path $Share 'openrcx-app.yaml'
+if (Test-Path $shareYaml) {
+    Copy-Item (Join-Path $repo 'truenas\openrcx-app.yaml') "$shareYaml.new" -Force
+    $yamlNote = "YAML: kept $shareYaml (has your secrets); repo version written to $shareYaml.new"
+} else {
+    Copy-Item (Join-Path $repo 'truenas\openrcx-app.yaml') $shareYaml -Force
+    $yamlNote = "YAML for the TrueNAS installer: $shareYaml"
+}
 
 $commit = git -C $repo log -1 --format='%h %s'
 Set-Content -Path (Join-Path $dest 'DEPLOYED.txt') -Value "$commit`r`n$(Get-Date -Format s)" -Encoding utf8
 Write-Host "Deployed $commit to $dest"
-Write-Host "YAML for the TrueNAS installer: $(Join-Path $Share 'openrcx-app.yaml')"
+Write-Host $yamlNote
