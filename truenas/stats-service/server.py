@@ -128,6 +128,10 @@ def summary(days):
                  SUM(event='firmware' AND ok=1) AS firmware,
                  SUM(event='file') AS files,
                  SUM(event='control') AS control,
+                 SUM(event='sign_in' AND ok=1) AS sign_ins,
+                 SUM(event='save' AND ok=1) AS saves,
+                 SUM(event='save' AND ok=1 AND detail='auto') AS autosaves,
+                 SUM(event='open') AS opens,
                  SUM(CASE WHEN event='session' THEN dur END) AS seconds,
                  SUM(event='session') AS ended_sessions
                FROM events {where}""",
@@ -162,6 +166,11 @@ def summary(days):
     out["browsers"] = rows("SELECT browser, COUNT(DISTINCT vid) AS visitors FROM events WHERE event='page_view' AND day >= ? GROUP BY browser ORDER BY visitors DESC", (since,))
     out["oses"] = rows("SELECT os, COUNT(DISTINCT vid) AS visitors FROM events WHERE event='page_view' AND day >= ? GROUP BY os ORDER BY visitors DESC", (since,))
     out["editor_modes"] = rows("SELECT app, detail AS mode, COUNT(*) AS n FROM events WHERE event='editor_mode' AND day >= ? GROUP BY app, detail ORDER BY app, n DESC", (since,))
+    # compiles per language (blocks, nqc, nxc, evc, asm, c ...), successes and failures
+    out["compile_langs"] = rows("SELECT app, detail AS lang, SUM(ok=1) AS ok, SUM(ok=0) AS fail FROM events WHERE event='compile' AND day >= ? GROUP BY app, detail ORDER BY app, ok DESC", (since,))
+    # accounts: sign-ins per provider, saves by kind, library opens
+    out["sign_ins"] = rows("SELECT detail AS provider, SUM(ok=1) AS ok, SUM(ok=0) AS fail FROM events WHERE event='sign_in' AND day >= ? GROUP BY detail ORDER BY ok DESC", (since,))
+    out["library"] = rows("SELECT app, event, detail AS kind, SUM(ok=1) AS ok, SUM(ok=0) AS fail FROM events WHERE event IN ('save', 'open') AND day >= ? GROUP BY app, event, detail ORDER BY app, event, ok DESC", (since,))
     out["examples"] = rows("SELECT app, detail AS name, COUNT(*) AS n FROM events WHERE event='example' AND day >= ? GROUP BY app, detail ORDER BY n DESC LIMIT 20", (since,))
     out["errors"] = rows("SELECT app, event, detail, COUNT(*) AS n FROM events WHERE ok=0 AND day >= ? GROUP BY app, event, detail ORDER BY n DESC LIMIT 20", (since,))
     out["controls"] = rows("SELECT app, detail AS what, COUNT(*) AS n FROM events WHERE event='control' AND day >= ? GROUP BY app, detail ORDER BY n DESC LIMIT 20", (since,))

@@ -79,6 +79,8 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
       <div class="panel"><h2>Browsers <span>visitors</span></h2><div id="browsers"></div></div>
       <div class="panel"><h2>Operating systems <span>visitors</span></h2><div id="oses"></div></div>
       <div class="panel"><h2>Editor modes <span>switches, in range</span></h2><div id="modes"></div></div>
+      <div class="panel"><h2>Compiles by language <span>in range; failed compiles in red</span></h2><div id="langs"></div></div>
+      <div class="panel"><h2>Accounts <span>sign-ins and the program library, in range</span></h2><div id="accounts" class="scroll"></div></div>
       <div class="panel"><h2>Examples opened</h2><div id="examples" class="scroll"></div></div>
       <div class="panel"><h2>Control panel use</h2><div id="controls" class="scroll"></div></div>
       <div class="panel"><h2>Failures <span>connects, compiles, uploads that did not work</span></h2><div id="errors" class="scroll"></div></div>
@@ -98,6 +100,9 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
   const APPS = ['home', 'rcx', 'nxt', 'ev3'];
   const APP_NAMES = { home: 'Home', rcx: 'OpenRCX', nxt: 'OpenNXT', ev3: 'OpenEV3' };
   const LINKS = [['usb', 'USB'], ['serial', 'Serial tower'], ['bt', 'Bluetooth'], ['sim', 'Simulator'], ['diy', 'DIY tower']];
+  const TEXT_LANG = { rcx: 'NQC', nxt: 'NXC', ev3: 'EVC' };
+  const modeName = (app, m) => ({ blocks: 'Blocks', text: (TEXT_LANG[app] || 'text') + ' text', asm: 'Assembly', c: 'C', python: 'Python' })[m] || m;
+  const langName = (app, l) => ({ blocks: 'Blocks', nqc: 'NQC', nxc: 'NXC', evc: 'EVC', asm: 'Assembly', c: 'C', 'c-unreachable': 'C (server unreachable)', 'server-unreachable': 'NXC (server unreachable)', text: (TEXT_LANG[app] || 'text') })[l] || l;
   const LINK_COLOR = { usb: 'var(--s1)', serial: 'var(--s2)', bt: 'var(--s3)', sim: 'var(--s4)', diy: 'var(--s5)' };
   let key = q.get('key') || ''; if (!key) { try { key = localStorage.getItem('om.statskey') || ''; } catch (e) { /* ignore */ } }
   let days = 30;
@@ -199,6 +204,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
       ['Brick connections', r.connects_real, a.connects_real, 'excluding the simulator'], ['Simulator runs', r.connects - r.connects_real, a.connects - a.connects_real],
       ['Compiles', r.compiles, a.compiles, r.compile_fail ? fmt(r.compile_fail) + ' failed' : ''], ['Programs sent', r.programs, a.programs], ['Programs run', r.runs, a.runs],
       ['Firmware installs', r.firmware, a.firmware], ['File operations', r.files, a.files], ['Time on site', hms(r.seconds), hms(a.seconds), r.ended_sessions ? 'avg ' + hms(r.seconds / r.ended_sessions) + ' per session' : ''],
+      ['Sign-ins', r.sign_ins, a.sign_ins], ['Library saves', r.saves, a.saves, r.autosaves ? fmt(r.autosaves) + ' automatic' : ''], ['Library opens', r.opens, a.opens],
     ];
     $('tiles').innerHTML = tiles.map(t => '<div class="tile"><div class="k">' + t[0] + '</div><div class="v">' + (typeof t[1] === 'number' ? fmt(t[1]) : t[1]) + '</div><div class="a">' + (t[3] ? esc(t[3]) + ' · ' : '') + 'all time ' + (typeof t[2] === 'number' ? fmt(t[2]) : t[2]) + '</div></div>').join('');
     lineChart($('daily'), s.daily, ['visitors', 'connects', 'programs'], ['Visitors', 'Connections', 'Programs sent'], ['var(--s1)', 'var(--s3)', 'var(--s2)']);
@@ -208,7 +214,12 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
     for (const c of s.connect_links) { if (!c.ok) continue; const row = linkRows.find(x => x.label === APP_NAMES[c.app]); if (row) row.values[c.link] = (row.values[c.link] || 0) + c.n; }
     stackedBars($('links'), linkRows, LINKS.map(([k, l]) => ({ key: k, label: l, color: LINK_COLOR[k] })));
     hbars($('browsers'), s.browsers, 'browser', 'visitors'); hbars($('oses'), s.oses, 'os', 'visitors');
-    hbars($('modes'), s.editor_modes.map(m => ({ label: APP_NAMES[m.app] + ' · ' + m.mode, n: m.n })), 'label', 'n');
+    hbars($('modes'), s.editor_modes.map(m => ({ label: APP_NAMES[m.app] + ' · ' + modeName(m.app, m.mode), n: m.n })), 'label', 'n');
+    const langs = (s.compile_langs || []).map(l => ({ label: APP_NAMES[l.app] + ' · ' + langName(l.app, l.lang), values: { ok: l.ok, fail: l.fail } }));
+    if (langs.length) stackedBars($('langs'), langs, [{ key: 'ok', label: 'compiled', color: 'var(--s3)' }, { key: 'fail', label: 'failed', color: 'var(--bad)' }]); else $('langs').innerHTML = '<div style="color:var(--muted);font-size:12px">nothing yet</div>';
+    const acct = (s.sign_ins || []).map(x => ({ what: 'Sign in with ' + (x.provider ? x.provider[0].toUpperCase() + x.provider.slice(1) : '(failed)'), app: '', ok: x.ok, fail: x.fail }))
+      .concat((s.library || []).map(x => ({ what: (x.event === 'save' ? { auto: 'Autosave', manual: 'Save', as: 'Save as' }[x.kind] || 'Save ' + x.kind : 'Open from library'), app: APP_NAMES[x.app] || x.app, ok: x.ok, fail: x.fail })));
+    table($('accounts'), [{ h: 'What' }, { h: 'App' }, { h: 'OK', n: true }, { h: 'Failed', n: true }], acct, e => [esc(e.what), esc(e.app), fmt(e.ok), e.fail ? '<span class="bad">' + fmt(e.fail) + '</span>' : '0']);
     table($('examples'), [{ h: 'App' }, { h: 'Example' }, { h: 'Opened', n: true }], s.examples, e => [esc(APP_NAMES[e.app] || e.app), esc(e.name), fmt(e.n)]);
     table($('controls'), [{ h: 'App' }, { h: 'Panel' }, { h: 'Uses', n: true }], s.controls, e => [esc(APP_NAMES[e.app] || e.app), esc(e.what), fmt(e.n)]);
     table($('errors'), [{ h: 'App' }, { h: 'Event' }, { h: 'Detail' }, { h: 'Count', n: true }], s.errors, e => [esc(APP_NAMES[e.app] || e.app), esc(e.event), esc(e.detail), fmt(e.n)]);
