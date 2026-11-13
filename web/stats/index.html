@@ -102,7 +102,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
   const LINKS = [['usb', 'USB'], ['serial', 'Serial tower'], ['bt', 'Bluetooth'], ['sim', 'Simulator'], ['diy', 'DIY tower']];
   const TEXT_LANG = { rcx: 'NQC', nxt: 'NXC', ev3: 'EVC' };
   const modeName = (app, m) => ({ blocks: 'Blocks', text: (TEXT_LANG[app] || 'text') + ' text', asm: 'Assembly', c: 'C', python: 'Python' })[m] || m;
-  const langName = (app, l) => ({ blocks: 'Blocks', nqc: 'NQC', nxc: 'NXC', evc: 'EVC', asm: 'Assembly', c: 'C', 'c-unreachable': 'C (server unreachable)', 'server-unreachable': 'NXC (server unreachable)', text: (TEXT_LANG[app] || 'text') })[l] || l;
+  const langName = (app, l) => ({ blocks: 'Blocks', nqc: 'NQC', nxc: 'NXC', evc: 'EVC', asm: 'Assembly', c: 'C', 'c-unreachable': 'C, no server', 'server-unreachable': 'NXC, no server', text: (TEXT_LANG[app] || 'text') })[l] || l;
   const LINK_COLOR = { usb: 'var(--s1)', serial: 'var(--s2)', bt: 'var(--s3)', sim: 'var(--s4)', diy: 'var(--s5)' };
   let key = q.get('key') || ''; if (!key) { try { key = localStorage.getItem('om.statskey') || ''; } catch (e) { /* ignore */ } }
   let days = 30;
@@ -217,7 +217,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
     hbars($('modes'), s.editor_modes.map(m => ({ label: APP_NAMES[m.app] + ' · ' + modeName(m.app, m.mode), n: m.n })), 'label', 'n');
     const langs = (s.compile_langs || []).map(l => ({ label: APP_NAMES[l.app] + ' · ' + langName(l.app, l.lang), values: { ok: l.ok, fail: l.fail } }));
     if (langs.length) stackedBars($('langs'), langs, [{ key: 'ok', label: 'compiled', color: 'var(--s3)' }, { key: 'fail', label: 'failed', color: 'var(--bad)' }]); else $('langs').innerHTML = '<div style="color:var(--muted);font-size:12px">nothing yet</div>';
-    const acct = (s.sign_ins || []).map(x => ({ what: 'Sign in with ' + (x.provider ? x.provider[0].toUpperCase() + x.provider.slice(1) : '(failed)'), app: '', ok: x.ok, fail: x.fail }))
+    const acct = (s.sign_ins || []).map(x => ({ what: 'Sign in with ' + ({ google: 'Google', github: 'GitHub', dev: 'test user' }[x.provider] || x.provider || '(failed)'), app: '', ok: x.ok, fail: x.fail }))
       .concat((s.library || []).map(x => ({ what: (x.event === 'save' ? { auto: 'Autosave', manual: 'Save', as: 'Save as' }[x.kind] || 'Save ' + x.kind : 'Open from library'), app: APP_NAMES[x.app] || x.app, ok: x.ok, fail: x.fail })));
     table($('accounts'), [{ h: 'What' }, { h: 'App' }, { h: 'OK', n: true }, { h: 'Failed', n: true }], acct, e => [esc(e.what), esc(e.app), fmt(e.ok), e.fail ? '<span class="bad">' + fmt(e.fail) + '</span>' : '0']);
     table($('examples'), [{ h: 'App' }, { h: 'Example' }, { h: 'Opened', n: true }], s.examples, e => [esc(APP_NAMES[e.app] || e.app), esc(e.name), fmt(e.n)]);
